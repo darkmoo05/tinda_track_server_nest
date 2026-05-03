@@ -1,0 +1,238 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // In Prisma 7 the runtime URL is injected via the @prisma/adapter-pg adapter
+  // in PrismaService. The CLI picks up DATABASE_URL from prisma.config.ts.
+}
+
+enum WalletProvider {
+  GCASH
+  MAYA
+}
+
+enum TransactionDirection {
+  CASH_IN
+  CASH_OUT
+}
+
+enum OcrStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum StockMovementType {
+  RESTOCK
+  ADJUSTMENT
+  SALE
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHARGE — tiered service-charge rules set by the owner.
+// lowerBound / upperBound define the transaction amount range.
+// chargeAmount is the fixed fee applied when the amount falls in that range.
+// syncId mirrors the client-side UUID so offline devices can upsert safely.
+// ─────────────────────────────────────────────────────────────────────────────
+model Charge {
+  id           String   @id @default(uuid())
+  syncId       String   @unique
+  deviceId     String
+  lowerBound   Float
+  upperBound   Float
+  chargeAmount Float
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("charges")
+}
+
+model Party {
+  id            String   @id @default(uuid())
+  syncId        String   @unique
+  deviceId      String
+  name          String
+  accountNumber String
+  entityId      String   @default("")
+  description   String   @default("")
+  joinDate      String
+  isVerified    Boolean  @default(false)
+  isDeleted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("parties")
+}
+
+model TransactionType {
+  id           String   @id @default(uuid())
+  syncId       String   @unique
+  deviceId     String
+  name         String
+  isOutflow    Boolean  @default(false)
+  walletAccount String  @default("GCash")
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("transaction_types")
+}
+
+model MovementCategory {
+  id         String   @id @default(uuid())
+  syncId     String   @unique
+  deviceId   String
+  name       String
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("movement_categories")
+}
+
+model LedgerEntry {
+  id                String   @id @default(uuid())
+  syncId            String   @unique
+  transactionId     String?
+  deviceId          String
+  entryType         String
+  title             String   @default("")
+  note              String   @default("")
+  reference         String   @default("")
+  amount            Float
+  walletDelta       Float    @default(0)
+  mayaWalletDelta   Float    @default(0)
+  onHandDelta       Float    @default(0)
+  recordedFlow      Float    @default(0)
+  tag               String   @default("")
+  iconKey           String   @default("")
+  walletAccount     String   @default("")
+  ownerScope        String   @default("Business")
+  ownerMovementType String?
+  ownerCategory     String?
+  ownerPartyName    String?
+  ownerPartyAccount String?
+  entryDate         String
+  isDeleted         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  transaction       Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@map("ledger_entries")
+}
+
+model Transaction {
+  id                 String               @id @default(uuid())
+  syncId             String?              @unique
+  deviceId           String?
+  walletProvider     WalletProvider
+  direction          TransactionDirection
+  amount             Float
+  chargeAmount       Float                @default(0)
+  totalAmount        Float
+  balanceBefore      Float
+  balanceAfter       Float
+  chargeLowerBound   Float?
+  chargeUpperBound   Float?
+  receiptImagePath   String?
+  receiptOriginalName String?
+  receiptMimeType    String?
+  receiptUploadedAt  DateTime?
+  ocrStatus          OcrStatus            @default(PENDING)
+  ocrExtractedAmount Float?
+  ocrRawText         String?
+  ocrProcessedAt     DateTime?
+  note               String               @default("")
+  reference          String               @default("")
+  entryDate          String
+  status             TransactionStatus    @default(COMPLETED)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  ledgerEntries      LedgerEntry[]
+
+  @@map("transactions")
+}
+
+model Product {
+  id             String          @id @default(uuid())
+  syncId         String?         @unique
+  deviceId       String?
+  name           String
+  sku            String          @unique
+  description    String          @default("")
+  category       String          @default("General")
+  unit           String          @default("pcs")
+  costPrice      Float           @default(0)
+  sellingPrice   Float
+  stockQuantity  Int             @default(0)
+  reorderPoint   Int             @default(0)
+  isActive       Boolean         @default(true)
+  isDeleted      Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
+
+  @@map("products")
+}
+
+model StockMovement {
+  id               String            @id @default(uuid())
+  productId        String
+  movementType     StockMovementType
+  quantity         Int
+  previousQuantity Int
+  newQuantity      Int
+  note             String            @default("")
+  reference        String            @default("")
+  createdAt        DateTime          @default(now())
+  product          Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, createdAt])
+  @@map("stock_movements")
+}
+
+model Sale {
+  id             String     @id @default(uuid())
+  reference      String     @unique
+  deviceId       String?
+  note           String     @default("")
+  subtotal       Float
+  totalAmount    Float
+  paidAmount     Float
+  changeAmount   Float      @default(0)
+  totalItems     Int
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  saleItems      SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id         String   @id @default(uuid())
+  saleId     String
+  productId  String
+  quantity   Int
+  unitPrice  Float
+  lineTotal  Float
+  createdAt  DateTime @default(now())
+  sale       Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([productId])
+  @@map("sale_items")
+}
