@@ -2,6 +2,11 @@ import { Type } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { TransactionDirection, WalletProvider } from '@prisma/client';
 
+export enum ChargeHandlingMode {
+  ADD_ON_TOP = 'addOnTop',
+  DEDUCT_FROM_AMOUNT = 'deductFromAmount',
+}
+
 export class CreateTransactionDto {
   @IsEnum(WalletProvider)
   walletProvider!: WalletProvider;
@@ -13,6 +18,10 @@ export class CreateTransactionDto {
   @IsNumber()
   @IsOptional()
   amount?: number;
+
+  @IsEnum(ChargeHandlingMode)
+  @IsOptional()
+  chargeHandling?: ChargeHandlingMode = ChargeHandlingMode.ADD_ON_TOP;
 
   @IsString()
   @IsOptional()
@@ -33,6 +42,14 @@ export class CreateTransactionDto {
   @IsString()
   @IsOptional()
   entryDate?: string;
+
+  @IsString()
+  @IsOptional()
+  externalProvider?: string;
+
+  @IsString()
+  @IsOptional()
+  externalTransactionId?: string;
 }
 
 export class CreateManualTransactionDto extends CreateTransactionDto {

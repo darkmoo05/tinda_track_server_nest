@@ -1,7 +1,9 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, ParseFilePipeBuilder, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { TransactionDirection, WalletProvider } from '@prisma/client';
 import { CreateManualTransactionDto, CreateTransactionDto } from './dto/create-transaction.dto.js';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto.js';
+import { TransactionPreviewQueryDto, TransactionPreviewResponseDto } from './dto/transaction-preview.dto.js';
 import { receiptFileFilter, receiptStorage } from './receipt-upload.storage.js';
 import { TransactionService } from './transaction.service.js';
 
@@ -12,6 +14,17 @@ export class TransactionController {
   @Get()
   async list(@Query() query: ListTransactionsQueryDto): Promise<{ success: boolean; data: unknown[] }> {
     const data = await this.transactionService.list(query);
+    return { success: true, data };
+  }
+
+  @Get('preview')
+  async preview(@Query() query: TransactionPreviewQueryDto): Promise<{ success: boolean; data: TransactionPreviewResponseDto }> {
+    const data = await this.transactionService.preview(
+      query.walletProvider,
+      query.direction,
+      query.amount,
+      (query.chargeHandling as 'addOnTop' | 'deductFromAmount') ?? 'addOnTop',
+    );
     return { success: true, data };
   }
 
