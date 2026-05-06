@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Transaction } from '@prisma/client';
 import { OcrStatus, TransactionDirection, TransactionStatus, WalletProvider } from '@prisma/client';
@@ -26,16 +26,54 @@ export class TransactionService {
       throw new BadRequestException('A valid transaction amount is required');
     }
 
+    // Check for duplicate syncId before entering transaction
+    if (dto.syncId) {
+      const existingTransaction = await this.prisma.transaction.findUnique({
+        where: { syncId: dto.syncId },
+      });
+      if (existingTransaction) {
+        throw new ConflictException('Transaction with this syncId already exists');
+      }
+    }
+
     const chargeRule = await this.chargeService.findApplicableCharge(resolvedAmount);
     const chargeAmount = chargeRule?.chargeAmount ?? 0;
-
-    const balanceBefore = await this.getWalletBalance(dto.walletProvider);
-    const movement = this.buildMovement(dto.walletProvider, dto.direction, resolvedAmount, chargeAmount);
-    const balanceAfter = balanceBefore + movement.walletBalanceDelta;
+    const chargeHandlingMode = dto.chargeHandling ?? 'addOnTop';
     const entryDate = dto.entryDate ?? new Date().toISOString();
     const reference = dto.reference?.trim() || this.buildReference(dto.walletProvider, dto.direction);
 
     return this.prisma.$transaction(async (client) => {
+      // Compute balanceBefore inside transaction to prevent races
+      const sums = await client.ledgerEntry.aggregate({
+        where: { isDeleted: false },
+        _sum: {
+          walletDelta: true,
+          mayaWalletDelta: true,
+        },
+      });
+
+      const balanceBefore =
+        dto.walletProvider === WalletProvider.GCASH
+          ? (sums._sum.walletDelta ?? 0)
+          : (sums._sum.mayaWalletDelta ?? 0);
+
+      const movement = this.buildMovement(
+        dto.walletProvider,
+        dto.direction,
+        resolvedAmount,
+        chargeAmount,
+        chargeHandlingMode as 'addOnTop' | 'deductFromAmount',
+      );
+
+      const balanceAfter = balanceBefore + movement.walletBalanceDelta;
+
+      // Validate that balance would not go negative
+      if (balanceAfter < 0) {
+        throw new BadRequestException(
+          `Insufficient wallet balance. Current: ${balanceBefore}, requested: ${movement.walletBalanceDelta}, would result in: ${balanceAfter}`,
+        );
+      }
+
       const transaction = await client.transaction.create({
         data: {
           syncId: dto.syncId,
@@ -44,6 +82,7 @@ export class TransactionService {
           direction: dto.direction,
           amount: resolvedAmount,
           chargeAmount,
+          chargeHandling: chargeHandlingMode,
           totalAmount: resolvedAmount + chargeAmount,
           balanceBefore,
           balanceAfter,
@@ -57,6 +96,8 @@ export class TransactionService {
           ocrExtractedAmount: ocrResult.amount,
           ocrRawText: ocrResult.rawText || null,
           ocrProcessedAt: receiptFile ? new Date() : null,
+          externalProvider: dto.externalProvider,
+          externalTransactionId: dto.externalTransactionId,
           note: dto.note ?? '',
           reference,
           entryDate,
@@ -103,6 +144,55 @@ export class TransactionService {
     });
   }
 
+  async preview(
+    walletProvider: WalletProvider,
+    direction: TransactionDirection,
+    amount: number,
+    chargeHandling: 'addOnTop' | 'deductFromAmount' = 'addOnTop',
+  ): Promise<{
+    chargeAmount: number;
+    totalCollected: number;
+    walletCredit: number;
+    onHandChange: number;
+    feeRoutingExplanation: string;
+    currentWalletBalance: number;
+    postTransactionWalletBalance: number;
+  }> {
+    if (amount <= 0) {
+      throw new BadRequestException('Amount must be greater than 0');
+    }
+
+    const chargeRule = await this.chargeService.findApplicableCharge(amount);
+    const chargeAmount = chargeRule?.chargeAmount ?? 0;
+
+    const movement = this.buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandling);
+    const currentWalletBalance = await this.getWalletBalance(walletProvider);
+    const postTransactionWalletBalance = currentWalletBalance + movement.walletBalanceDelta;
+
+    let feeRoutingExplanation: string;
+    if (direction === TransactionDirection.CASH_IN) {
+      feeRoutingExplanation =
+        chargeHandling === 'addOnTop'
+          ? `Inflow: customer pays $${amount.toFixed(2)} + $${chargeAmount.toFixed(2)} in cash. Business wallet decreases by $${amount.toFixed(2)} and on-hand increases by $${(amount + chargeAmount).toFixed(2)}.`
+          : `Inflow: customer pays $${amount.toFixed(2)} cash. Business wallet decreases by $${(amount - chargeAmount).toFixed(2)} (fee deducted from wallet transfer) and on-hand increases by $${amount.toFixed(2)}.`;
+    } else {
+      feeRoutingExplanation =
+        chargeHandling === 'addOnTop'
+          ? `Outflow: customer's wallet is charged $${amount.toFixed(2)} + $${chargeAmount.toFixed(2)}. Business wallet increases by $${(amount + chargeAmount).toFixed(2)} and on-hand decreases by $${amount.toFixed(2)}.`
+          : `Outflow: customer's wallet is charged $${amount.toFixed(2)}. Business wallet increases by $${amount.toFixed(2)} and on-hand decreases by $${(amount - chargeAmount).toFixed(2)} (fee deducted from cash payout).`;
+    }
+
+    return {
+      chargeAmount,
+      totalCollected: amount + chargeAmount,
+      walletCredit: direction === TransactionDirection.CASH_IN ? -amount : amount,
+      onHandChange: movement.onHandDelta,
+      feeRoutingExplanation,
+      currentWalletBalance,
+      postTransactionWalletBalance,
+    };
+  }
+
   private async getWalletBalance(walletProvider: WalletProvider): Promise<number> {
     const sums = await this.prisma.ledgerEntry.aggregate({
       where: { isDeleted: false },
@@ -122,15 +212,43 @@ export class TransactionService {
     direction: TransactionDirection,
     amount: number,
     chargeAmount: number,
+    chargeHandlingMode: 'addOnTop' | 'deductFromAmount' = 'addOnTop',
   ): {
     walletBalanceDelta: number;
     walletDelta: number;
     mayaWalletDelta: number;
     onHandDelta: number;
   } {
-    const isCashIn = direction === TransactionDirection.CASH_IN;
-    const walletBalanceDelta = isCashIn ? -amount : amount + chargeAmount;
-    const onHandDelta = isCashIn ? amount + chargeAmount : -amount;
+    let walletBalanceDelta: number;
+    let onHandDelta: number;
+
+    if (direction === TransactionDirection.CASH_IN) {
+      // Inflow: customer gives cash → ALL cash goes to on-hand; store sends e-money from wallet to customer.
+      // wallet decreases (store loads customer), on-hand increases (store received cash + fee)
+      if (chargeHandlingMode === 'addOnTop') {
+        // Customer pays amount + fee in cash.
+        // Store sends amount from wallet to customer. Store pockets amount + fee in on-hand.
+        walletBalanceDelta = -amount;
+        onHandDelta = amount + chargeAmount;
+      } else {
+        // Customer pays amount in cash. Fee deducted from what store sends to customer's wallet.
+        // Store sends (amount - fee) from wallet to customer. Store pockets full amount in on-hand.
+        walletBalanceDelta = -(amount - chargeAmount);
+        onHandDelta = amount;
+      }
+    } else {
+      // Outflow: customer's e-wallet is charged → ALL wallet movement goes to store wallet; store gives cash.
+      // wallet increases (store receives e-money), on-hand decreases (store pays out cash)
+      if (chargeHandlingMode === 'addOnTop') {
+        // Customer's wallet charged amount + fee. Store receives all of it in wallet. Pays out amount in cash.
+        walletBalanceDelta = amount + chargeAmount;
+        onHandDelta = -amount;
+      } else {
+        // Customer's wallet charged amount. Store receives all of it in wallet. Pays out (amount - fee) in cash.
+        walletBalanceDelta = amount;
+        onHandDelta = -(amount - chargeAmount);
+      }
+    }
 
     return {
       walletBalanceDelta,

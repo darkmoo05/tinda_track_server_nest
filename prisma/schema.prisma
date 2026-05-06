@@ -146,6 +146,7 @@ model Transaction {
   balanceAfter       Float
   chargeLowerBound   Float?
   chargeUpperBound   Float?
+  chargeHandling     String               @default("addOnTop")
   receiptImagePath   String?
   receiptOriginalName String?
   receiptMimeType    String?
@@ -154,6 +155,8 @@ model Transaction {
   ocrExtractedAmount Float?
   ocrRawText         String?
   ocrProcessedAt     DateTime?
+  externalProvider   String?
+  externalTransactionId String?
   note               String               @default("")
   reference          String               @default("")
   entryDate          String
