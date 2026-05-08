@@ -41,7 +41,7 @@ let TransactionService = class TransactionService {
                 throw new common_1.ConflictException('Transaction with this syncId already exists');
             }
         }
-        const chargeRule = await this.chargeService.findApplicableCharge(resolvedAmount);
+        const chargeRule = await this.chargeService.findApplicableCharge(resolvedAmount, dto.transactionTypeKey ?? this.buildTransactionTypeKey(dto.walletProvider, dto.direction));
         const chargeAmount = chargeRule?.chargeAmount ?? 0;
         const chargeHandlingMode = dto.chargeHandling ?? 'addOnTop';
         const entryDate = dto.entryDate ?? new Date().toISOString();
@@ -128,11 +128,11 @@ let TransactionService = class TransactionService {
             take: query.limit ?? 20,
         });
     }
-    async preview(walletProvider, direction, amount, chargeHandling = 'addOnTop') {
+    async preview(walletProvider, direction, amount, chargeHandling = 'addOnTop', transactionTypeKey) {
         if (amount <= 0) {
             throw new common_1.BadRequestException('Amount must be greater than 0');
         }
-        const chargeRule = await this.chargeService.findApplicableCharge(amount);
+        const chargeRule = await this.chargeService.findApplicableCharge(amount, transactionTypeKey ?? this.buildTransactionTypeKey(walletProvider, direction));
         const chargeAmount = chargeRule?.chargeAmount ?? 0;
         const movement = this.buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandling);
         const currentWalletBalance = await this.getWalletBalance(walletProvider);
@@ -141,14 +141,14 @@ let TransactionService = class TransactionService {
         if (direction === client_1.TransactionDirection.CASH_IN) {
             feeRoutingExplanation =
                 chargeHandling === 'addOnTop'
-                    ? `Inflow: customer pays $${amount.toFixed(2)} + $${chargeAmount.toFixed(2)} in cash. Business wallet decreases by $${amount.toFixed(2)} and on-hand increases by $${(amount + chargeAmount).toFixed(2)}.`
-                    : `Inflow: customer pays $${amount.toFixed(2)} cash. Business wallet decreases by $${(amount - chargeAmount).toFixed(2)} (fee deducted from wallet transfer) and on-hand increases by $${amount.toFixed(2)}.`;
+                    ? `Inflow: customer pays ₱${amount.toFixed(2)} + ₱${chargeAmount.toFixed(2)} in cash. Business wallet decreases by ₱${amount.toFixed(2)} and on-hand increases by ₱${(amount + chargeAmount).toFixed(2)}.`
+                    : `Inflow: customer pays ₱${amount.toFixed(2)} cash. Business wallet decreases by ₱${(amount - chargeAmount).toFixed(2)} (fee deducted from wallet transfer) and on-hand increases by ₱${amount.toFixed(2)}.`;
         }
         else {
             feeRoutingExplanation =
                 chargeHandling === 'addOnTop'
-                    ? `Outflow: customer's wallet is charged $${amount.toFixed(2)} + $${chargeAmount.toFixed(2)}. Business wallet increases by $${(amount + chargeAmount).toFixed(2)} and on-hand decreases by $${amount.toFixed(2)}.`
-                    : `Outflow: customer's wallet is charged $${amount.toFixed(2)}. Business wallet increases by $${amount.toFixed(2)} and on-hand decreases by $${(amount - chargeAmount).toFixed(2)} (fee deducted from cash payout).`;
+                    ? `Outflow: customer's wallet is charged ₱${amount.toFixed(2)} + ₱${chargeAmount.toFixed(2)}. Business wallet increases by ₱${(amount + chargeAmount).toFixed(2)} and on-hand decreases by ₱${amount.toFixed(2)}.`
+                    : `Outflow: customer's wallet is charged ₱${amount.toFixed(2)}. Business wallet increases by ₱${amount.toFixed(2)} and on-hand decreases by ₱${(amount - chargeAmount).toFixed(2)} (fee deducted from cash payout).`;
         }
         return {
             chargeAmount,
@@ -159,6 +159,11 @@ let TransactionService = class TransactionService {
             currentWalletBalance,
             postTransactionWalletBalance,
         };
+    }
+    buildTransactionTypeKey(walletProvider, direction) {
+        const wallet = walletProvider === client_1.WalletProvider.GCASH ? 'gcash' : 'maya';
+        const dir = direction === client_1.TransactionDirection.CASH_IN ? 'cashin' : 'cashout';
+        return `${wallet}_${dir}`;
     }
     async getWalletBalance(walletProvider) {
         const sums = await this.prisma.ledgerEntry.aggregate({

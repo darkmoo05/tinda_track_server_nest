@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionPreviewResponseDto = exports.TransactionPreviewQueryDto = void 0;
+const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 const client_1 = require("@prisma/client");
 class TransactionPreviewQueryDto {
@@ -17,6 +18,7 @@ class TransactionPreviewQueryDto {
     direction;
     amount;
     chargeHandling = 'addOnTop';
+    transactionTypeKey;
 }
 exports.TransactionPreviewQueryDto = TransactionPreviewQueryDto;
 __decorate([
@@ -28,6 +30,7 @@ __decorate([
     __metadata("design:type", String)
 ], TransactionPreviewQueryDto.prototype, "direction", void 0);
 __decorate([
+    (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], TransactionPreviewQueryDto.prototype, "amount", void 0);
@@ -36,6 +39,11 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], TransactionPreviewQueryDto.prototype, "chargeHandling", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], TransactionPreviewQueryDto.prototype, "transactionTypeKey", void 0);
 class TransactionPreviewResponseDto {
     chargeAmount;
     totalCollected;

@@ -4,6 +4,7 @@ export declare class ChargeItemDto {
     lowerBound: number;
     upperBound: number;
     chargeAmount: number;
+    transactionTypeKey?: string;
     isDeleted?: boolean;
 }
 export declare class PushChargesDto {

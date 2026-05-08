@@ -24,6 +24,7 @@ export class TransactionController {
       query.direction,
       query.amount,
       (query.chargeHandling as 'addOnTop' | 'deductFromAmount') ?? 'addOnTop',
+      query.transactionTypeKey,
     );
     return { success: true, data };
   }

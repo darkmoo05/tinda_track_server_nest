@@ -18,6 +18,7 @@ class ChargeItemDto {
     lowerBound;
     upperBound;
     chargeAmount;
+    transactionTypeKey;
     isDeleted;
 }
 exports.ChargeItemDto = ChargeItemDto;
@@ -43,6 +44,11 @@ __decorate([
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], ChargeItemDto.prototype, "chargeAmount", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ChargeItemDto.prototype, "transactionTypeKey", void 0);
 __decorate([
     (0, class_validator_1.IsBoolean)(),
     (0, class_validator_1.IsOptional)(),

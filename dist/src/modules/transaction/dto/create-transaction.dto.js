@@ -30,6 +30,7 @@ class CreateTransactionDto {
     entryDate;
     externalProvider;
     externalTransactionId;
+    transactionTypeKey;
 }
 exports.CreateTransactionDto = CreateTransactionDto;
 __decorate([
@@ -86,6 +87,11 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateTransactionDto.prototype, "externalTransactionId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTransactionDto.prototype, "transactionTypeKey", void 0);
 class CreateManualTransactionDto extends CreateTransactionDto {
 }
 exports.CreateManualTransactionDto = CreateManualTransactionDto;

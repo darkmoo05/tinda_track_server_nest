@@ -15,6 +15,7 @@ export declare class CreateTransactionDto {
     entryDate?: string;
     externalProvider?: string;
     externalTransactionId?: string;
+    transactionTypeKey?: string;
 }
 export declare class CreateManualTransactionDto extends CreateTransactionDto {
     amount: number;

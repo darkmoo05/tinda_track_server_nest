@@ -46,15 +46,16 @@ enum StockMovementType {
 // syncId mirrors the client-side UUID so offline devices can upsert safely.
 // ─────────────────────────────────────────────────────────────────────────────
 model Charge {
-  id           String   @id @default(uuid())
-  syncId       String   @unique
-  deviceId     String
-  lowerBound   Float
-  upperBound   Float
-  chargeAmount Float
-  isDeleted    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  syncId              String   @unique
+  deviceId            String
+  lowerBound          Float
+  upperBound          Float
+  chargeAmount        Float
+  transactionTypeKey  String   @default("gcash_cashin")
+  isDeleted           Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@map("charges")
 }

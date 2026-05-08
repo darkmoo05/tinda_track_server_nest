@@ -4,6 +4,7 @@ export declare class TransactionPreviewQueryDto {
     direction: TransactionDirection;
     amount: number;
     chargeHandling?: string;
+    transactionTypeKey?: string;
 }
 export declare class TransactionPreviewResponseDto {
     chargeAmount: number;

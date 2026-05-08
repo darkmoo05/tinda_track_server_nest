@@ -30,7 +30,7 @@ let TransactionController = class TransactionController {
         return { success: true, data };
     }
     async preview(query) {
-        const data = await this.transactionService.preview(query.walletProvider, query.direction, query.amount, query.chargeHandling ?? 'addOnTop');
+        const data = await this.transactionService.preview(query.walletProvider, query.direction, query.amount, query.chargeHandling ?? 'addOnTop', query.transactionTypeKey);
         return { success: true, data };
     }
     async createManual(body) {
