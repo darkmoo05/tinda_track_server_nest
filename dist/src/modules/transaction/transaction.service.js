@@ -153,7 +153,7 @@ let TransactionService = class TransactionService {
         return {
             chargeAmount,
             totalCollected: amount + chargeAmount,
-            walletCredit: direction === client_1.TransactionDirection.CASH_IN ? -amount : amount,
+            walletCredit: movement.walletBalanceDelta,
             onHandChange: movement.onHandDelta,
             feeRoutingExplanation,
             currentWalletBalance,

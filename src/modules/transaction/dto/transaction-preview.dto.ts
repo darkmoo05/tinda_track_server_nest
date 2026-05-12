@@ -23,11 +23,11 @@ export class TransactionPreviewQueryDto {
 }
 
 export class TransactionPreviewResponseDto {
-  chargeAmount: number;
-  totalCollected: number;
-  walletCredit: number;
-  onHandChange: number;
-  feeRoutingExplanation: string;
-  currentWalletBalance: number;
-  postTransactionWalletBalance: number;
+  chargeAmount!: number;
+  totalCollected!: number;
+  walletCredit!: number;
+  onHandChange!: number;
+  feeRoutingExplanation!: string;
+  currentWalletBalance!: number;
+  postTransactionWalletBalance!: number;
 }
