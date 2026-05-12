@@ -8,5 +8,5 @@ export declare class ChargeService {
     constructor(prisma: PrismaService);
     push(records: ChargeItemDto[]): Promise<number>;
     pull(query: PullChargesQueryDto): Promise<Charge[]>;
-    findApplicableCharge(amount: number): Promise<Charge | null>;
+    findApplicableCharge(amount: number, transactionTypeKey?: string): Promise<Charge | null>;
 }

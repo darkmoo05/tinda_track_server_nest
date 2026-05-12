@@ -36,6 +36,14 @@ export class ChargeItemDto {
   @IsNumber()
   chargeAmount!: number;
 
+  /**
+   * Identifies which transaction type this bracket applies to.
+   * e.g. 'gcash_cashin', 'gcash_cashout', 'maya_cashin', 'maya_cashout'.
+   */
+  @IsString()
+  @IsOptional()
+  transactionTypeKey?: string;
+
   /** Soft-delete flag. Defaults to false. */
   @IsBoolean()
   @IsOptional()

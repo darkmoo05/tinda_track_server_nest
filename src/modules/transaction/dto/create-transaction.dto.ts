@@ -50,6 +50,10 @@ export class CreateTransactionDto {
   @IsString()
   @IsOptional()
   externalTransactionId?: string;
+
+  @IsString()
+  @IsOptional()
+  transactionTypeKey?: string;
 }
 
 export class CreateManualTransactionDto extends CreateTransactionDto {

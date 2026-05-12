@@ -34,6 +34,7 @@ export class ChargeService {
             lowerBound: r.lowerBound,
             upperBound: r.upperBound,
             chargeAmount: r.chargeAmount,
+            transactionTypeKey: r.transactionTypeKey ?? 'gcash_cashin',
             isDeleted: r.isDeleted ?? false,
           },
           update: {
@@ -41,6 +42,7 @@ export class ChargeService {
             lowerBound: r.lowerBound,
             upperBound: r.upperBound,
             chargeAmount: r.chargeAmount,
+            transactionTypeKey: r.transactionTypeKey ?? 'gcash_cashin',
             isDeleted: r.isDeleted ?? false,
           },
         }),
@@ -74,12 +76,13 @@ export class ChargeService {
     });
   }
 
-  async findApplicableCharge(amount: number): Promise<Charge | null> {
+  async findApplicableCharge(amount: number, transactionTypeKey?: string): Promise<Charge | null> {
     return this.prisma.charge.findFirst({
       where: {
         isDeleted: false,
         lowerBound: { lte: amount },
         upperBound: { gte: amount },
+        ...(transactionTypeKey ? { transactionTypeKey } : {}),
       },
       orderBy: [{ lowerBound: 'asc' }, { createdAt: 'asc' }],
     });

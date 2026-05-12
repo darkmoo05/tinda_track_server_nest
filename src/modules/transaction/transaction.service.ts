@@ -36,7 +36,10 @@ export class TransactionService {
       }
     }
 
-    const chargeRule = await this.chargeService.findApplicableCharge(resolvedAmount);
+    const chargeRule = await this.chargeService.findApplicableCharge(
+      resolvedAmount,
+      dto.transactionTypeKey ?? this.buildTransactionTypeKey(dto.walletProvider, dto.direction),
+    );
     const chargeAmount = chargeRule?.chargeAmount ?? 0;
     const chargeHandlingMode = dto.chargeHandling ?? 'addOnTop';
     const entryDate = dto.entryDate ?? new Date().toISOString();
@@ -149,6 +152,7 @@ export class TransactionService {
     direction: TransactionDirection,
     amount: number,
     chargeHandling: 'addOnTop' | 'deductFromAmount' = 'addOnTop',
+    transactionTypeKey?: string,
   ): Promise<{
     chargeAmount: number;
     totalCollected: number;
@@ -162,7 +166,10 @@ export class TransactionService {
       throw new BadRequestException('Amount must be greater than 0');
     }
 
-    const chargeRule = await this.chargeService.findApplicableCharge(amount);
+    const chargeRule = await this.chargeService.findApplicableCharge(
+      amount,
+      transactionTypeKey ?? this.buildTransactionTypeKey(walletProvider, direction),
+    );
     const chargeAmount = chargeRule?.chargeAmount ?? 0;
 
     const movement = this.buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandling);
@@ -173,24 +180,30 @@ export class TransactionService {
     if (direction === TransactionDirection.CASH_IN) {
       feeRoutingExplanation =
         chargeHandling === 'addOnTop'
-          ? `Inflow: customer pays $${amount.toFixed(2)} + $${chargeAmount.toFixed(2)} in cash. Business wallet decreases by $${amount.toFixed(2)} and on-hand increases by $${(amount + chargeAmount).toFixed(2)}.`
-          : `Inflow: customer pays $${amount.toFixed(2)} cash. Business wallet decreases by $${(amount - chargeAmount).toFixed(2)} (fee deducted from wallet transfer) and on-hand increases by $${amount.toFixed(2)}.`;
+          ? `Inflow: customer pays ₱${amount.toFixed(2)} + ₱${chargeAmount.toFixed(2)} in cash. Business wallet decreases by ₱${amount.toFixed(2)} and on-hand increases by ₱${(amount + chargeAmount).toFixed(2)}.`
+          : `Inflow: customer pays ₱${amount.toFixed(2)} cash. Business wallet decreases by ₱${(amount - chargeAmount).toFixed(2)} (fee deducted from wallet transfer) and on-hand increases by ₱${amount.toFixed(2)}.`;
     } else {
       feeRoutingExplanation =
         chargeHandling === 'addOnTop'
-          ? `Outflow: customer's wallet is charged $${amount.toFixed(2)} + $${chargeAmount.toFixed(2)}. Business wallet increases by $${(amount + chargeAmount).toFixed(2)} and on-hand decreases by $${amount.toFixed(2)}.`
-          : `Outflow: customer's wallet is charged $${amount.toFixed(2)}. Business wallet increases by $${amount.toFixed(2)} and on-hand decreases by $${(amount - chargeAmount).toFixed(2)} (fee deducted from cash payout).`;
+          ? `Outflow: customer's wallet is charged ₱${amount.toFixed(2)} + ₱${chargeAmount.toFixed(2)}. Business wallet increases by ₱${(amount + chargeAmount).toFixed(2)} and on-hand decreases by ₱${amount.toFixed(2)}.`
+          : `Outflow: customer's wallet is charged ₱${amount.toFixed(2)}. Business wallet increases by ₱${amount.toFixed(2)} and on-hand decreases by ₱${(amount - chargeAmount).toFixed(2)} (fee deducted from cash payout).`;
     }
 
     return {
       chargeAmount,
       totalCollected: amount + chargeAmount,
-      walletCredit: direction === TransactionDirection.CASH_IN ? -amount : amount,
+      walletCredit: movement.walletBalanceDelta,
       onHandChange: movement.onHandDelta,
       feeRoutingExplanation,
       currentWalletBalance,
       postTransactionWalletBalance,
     };
+  }
+
+  private buildTransactionTypeKey(walletProvider: WalletProvider, direction: TransactionDirection): string {
+    const wallet = walletProvider === WalletProvider.GCASH ? 'gcash' : 'maya';
+    const dir = direction === TransactionDirection.CASH_IN ? 'cashin' : 'cashout';
+    return `${wallet}_${dir}`;
   }
 
   private async getWalletBalance(walletProvider: WalletProvider): Promise<number> {

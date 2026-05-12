@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const platform_express_1 = require("@nestjs/platform-express");
 const create_transaction_dto_js_1 = require("./dto/create-transaction.dto.js");
 const list_transactions_query_dto_js_1 = require("./dto/list-transactions-query.dto.js");
+const transaction_preview_dto_js_1 = require("./dto/transaction-preview.dto.js");
 const receipt_upload_storage_js_1 = require("./receipt-upload.storage.js");
 const transaction_service_js_1 = require("./transaction.service.js");
 let TransactionController = class TransactionController {
@@ -26,6 +27,10 @@ let TransactionController = class TransactionController {
     }
     async list(query) {
         const data = await this.transactionService.list(query);
+        return { success: true, data };
+    }
+    async preview(query) {
+        const data = await this.transactionService.preview(query.walletProvider, query.direction, query.amount, query.chargeHandling ?? 'addOnTop', query.transactionTypeKey);
         return { success: true, data };
     }
     async createManual(body) {
@@ -45,6 +50,13 @@ __decorate([
     __metadata("design:paramtypes", [list_transactions_query_dto_js_1.ListTransactionsQueryDto]),
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "list", null);
+__decorate([
+    (0, common_1.Get)('preview'),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [transaction_preview_dto_js_1.TransactionPreviewQueryDto]),
+    __metadata("design:returntype", Promise)
+], TransactionController.prototype, "preview", null);
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),

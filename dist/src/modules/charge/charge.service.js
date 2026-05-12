@@ -28,6 +28,7 @@ let ChargeService = ChargeService_1 = class ChargeService {
                 lowerBound: r.lowerBound,
                 upperBound: r.upperBound,
                 chargeAmount: r.chargeAmount,
+                transactionTypeKey: r.transactionTypeKey ?? 'gcash_cashin',
                 isDeleted: r.isDeleted ?? false,
             },
             update: {
@@ -35,6 +36,7 @@ let ChargeService = ChargeService_1 = class ChargeService {
                 lowerBound: r.lowerBound,
                 upperBound: r.upperBound,
                 chargeAmount: r.chargeAmount,
+                transactionTypeKey: r.transactionTypeKey ?? 'gcash_cashin',
                 isDeleted: r.isDeleted ?? false,
             },
         })));
@@ -55,12 +57,13 @@ let ChargeService = ChargeService_1 = class ChargeService {
             orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
         });
     }
-    async findApplicableCharge(amount) {
+    async findApplicableCharge(amount, transactionTypeKey) {
         return this.prisma.charge.findFirst({
             where: {
                 isDeleted: false,
                 lowerBound: { lte: amount },
                 upperBound: { gte: amount },
+                ...(transactionTypeKey ? { transactionTypeKey } : {}),
             },
             orderBy: [{ lowerBound: 'asc' }, { createdAt: 'asc' }],
         });
