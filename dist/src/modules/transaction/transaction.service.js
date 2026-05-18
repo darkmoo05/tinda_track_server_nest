@@ -41,7 +41,8 @@ let TransactionService = class TransactionService {
                 throw new common_1.ConflictException('Transaction with this syncId already exists');
             }
         }
-        const chargeRule = await this.chargeService.findApplicableCharge(resolvedAmount, dto.transactionTypeKey ?? this.buildTransactionTypeKey(dto.walletProvider, dto.direction));
+        const resolvedTypeKey = dto.transactionTypeKey ?? this.buildTransactionTypeKey(dto.walletProvider, dto.direction);
+        const chargeRule = await this.chargeService.findApplicableCharge(resolvedAmount, resolvedTypeKey);
         const chargeAmount = chargeRule?.chargeAmount ?? 0;
         const chargeHandlingMode = dto.chargeHandling ?? 'addOnTop';
         const entryDate = dto.entryDate ?? new Date().toISOString();
@@ -57,7 +58,7 @@ let TransactionService = class TransactionService {
             const balanceBefore = dto.walletProvider === client_1.WalletProvider.GCASH
                 ? (sums._sum.walletDelta ?? 0)
                 : (sums._sum.mayaWalletDelta ?? 0);
-            const movement = this.buildMovement(dto.walletProvider, dto.direction, resolvedAmount, chargeAmount, chargeHandlingMode);
+            const movement = this.buildMovement(dto.walletProvider, dto.direction, resolvedAmount, chargeAmount, chargeHandlingMode, resolvedTypeKey);
             const balanceAfter = balanceBefore + movement.walletBalanceDelta;
             if (balanceAfter < 0) {
                 throw new common_1.BadRequestException(`Insufficient wallet balance. Current: ${balanceBefore}, requested: ${movement.walletBalanceDelta}, would result in: ${balanceAfter}`);
@@ -98,7 +99,9 @@ let TransactionService = class TransactionService {
                     transactionId: transaction.id,
                     deviceId: dto.deviceId ?? 'server',
                     entryType: 'E_WALLET_TRANSACTION',
-                    title: `${dto.walletProvider} ${dto.direction === client_1.TransactionDirection.CASH_IN ? 'Cash In' : 'Cash Out'}`,
+                    title: resolvedTypeKey.includes('qrpayment')
+                        ? `${dto.walletProvider} QR Payment`
+                        : `${dto.walletProvider} ${dto.direction === client_1.TransactionDirection.CASH_IN ? 'Cash In' : 'Cash Out'}`,
                     note: dto.note ?? '',
                     reference,
                     amount: resolvedAmount,
@@ -132,13 +135,17 @@ let TransactionService = class TransactionService {
         if (amount <= 0) {
             throw new common_1.BadRequestException('Amount must be greater than 0');
         }
-        const chargeRule = await this.chargeService.findApplicableCharge(amount, transactionTypeKey ?? this.buildTransactionTypeKey(walletProvider, direction));
+        const resolvedTypeKey = transactionTypeKey ?? this.buildTransactionTypeKey(walletProvider, direction);
+        const chargeRule = await this.chargeService.findApplicableCharge(amount, resolvedTypeKey);
         const chargeAmount = chargeRule?.chargeAmount ?? 0;
-        const movement = this.buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandling);
+        const movement = this.buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandling, resolvedTypeKey);
         const currentWalletBalance = await this.getWalletBalance(walletProvider);
         const postTransactionWalletBalance = currentWalletBalance + movement.walletBalanceDelta;
         let feeRoutingExplanation;
-        if (direction === client_1.TransactionDirection.CASH_IN) {
+        if (resolvedTypeKey.includes('qrpayment')) {
+            feeRoutingExplanation = `QR Payment (Top-up): customer sends ₱${(amount + chargeAmount).toFixed(2)} via QR (₱${amount.toFixed(2)} + ₱${chargeAmount.toFixed(2)} service fee). Business wallet increases by ₱${(amount + chargeAmount).toFixed(2)}, no cash exchange.`;
+        }
+        else if (direction === client_1.TransactionDirection.CASH_IN) {
             feeRoutingExplanation =
                 chargeHandling === 'addOnTop'
                     ? `Inflow: customer pays ₱${amount.toFixed(2)} + ₱${chargeAmount.toFixed(2)} in cash. Business wallet decreases by ₱${amount.toFixed(2)} and on-hand increases by ₱${(amount + chargeAmount).toFixed(2)}.`
@@ -177,10 +184,14 @@ let TransactionService = class TransactionService {
             ? (sums._sum.walletDelta ?? 0)
             : (sums._sum.mayaWalletDelta ?? 0);
     }
-    buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandlingMode = 'addOnTop') {
+    buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandlingMode = 'addOnTop', transactionTypeKey) {
         let walletBalanceDelta;
         let onHandDelta;
-        if (direction === client_1.TransactionDirection.CASH_IN) {
+        if (transactionTypeKey?.includes('qrpayment')) {
+            walletBalanceDelta = amount + chargeAmount;
+            onHandDelta = 0;
+        }
+        else if (direction === client_1.TransactionDirection.CASH_IN) {
             if (chargeHandlingMode === 'addOnTop') {
                 walletBalanceDelta = -amount;
                 onHandDelta = amount + chargeAmount;

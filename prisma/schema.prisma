@@ -103,6 +103,27 @@ model MovementCategory {
   @@map("movement_categories")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FEE TRANSACTION — records the service fee collected on each transaction.
+// relatedTransactionSyncId links back to the ledger entry via its syncId.
+// feeType mirrors the transaction title (e.g. "GCash Cash In").
+// chargeDestination is the account where the fee income lands.
+// ─────────────────────────────────────────────────────────────────────────────
+model FeeTransaction {
+  id                       String   @id @default(uuid())
+  syncId                   String   @unique
+  deviceId                 String
+  relatedTransactionSyncId String?
+  feeAmount                Float
+  feeType                  String
+  chargeDestination        String
+  isDeleted                Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("fee_transactions")
+}
+
 model LedgerEntry {
   id                String   @id @default(uuid())
   syncId            String   @unique

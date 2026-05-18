@@ -19,6 +19,7 @@ const dashboard_module_1 = require("./modules/dashboard/dashboard.module");
 const transaction_module_1 = require("./modules/transaction/transaction.module");
 const inventory_module_1 = require("./modules/inventory/inventory.module");
 const pos_module_1 = require("./modules/pos/pos.module");
+const fee_transaction_module_1 = require("./modules/fee-transaction/fee-transaction.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -36,6 +37,7 @@ exports.AppModule = AppModule = __decorate([
             transaction_module_1.TransactionModule,
             inventory_module_1.InventoryModule,
             pos_module_1.PosModule,
+            fee_transaction_module_1.FeeTransactionModule,
         ],
     })
 ], AppModule);
