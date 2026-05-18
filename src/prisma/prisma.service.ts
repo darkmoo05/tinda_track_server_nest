@@ -86,6 +86,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this._client.saleItem;
   }
 
+  get feeTransaction() {
+    return this._client.feeTransaction;
+  }
+
   async $transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {
     return this._client.$transaction(callback as never) as Promise<T>;
   }

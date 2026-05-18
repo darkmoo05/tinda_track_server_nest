@@ -36,9 +36,11 @@ export class TransactionService {
       }
     }
 
+    const resolvedTypeKey =
+      dto.transactionTypeKey ?? this.buildTransactionTypeKey(dto.walletProvider, dto.direction);
     const chargeRule = await this.chargeService.findApplicableCharge(
       resolvedAmount,
-      dto.transactionTypeKey ?? this.buildTransactionTypeKey(dto.walletProvider, dto.direction),
+      resolvedTypeKey,
     );
     const chargeAmount = chargeRule?.chargeAmount ?? 0;
     const chargeHandlingMode = dto.chargeHandling ?? 'addOnTop';
@@ -66,6 +68,7 @@ export class TransactionService {
         resolvedAmount,
         chargeAmount,
         chargeHandlingMode as 'addOnTop' | 'deductFromAmount',
+        resolvedTypeKey,
       );
 
       const balanceAfter = balanceBefore + movement.walletBalanceDelta;
@@ -114,7 +117,9 @@ export class TransactionService {
           transactionId: transaction.id,
           deviceId: dto.deviceId ?? 'server',
           entryType: 'E_WALLET_TRANSACTION',
-          title: `${dto.walletProvider} ${dto.direction === TransactionDirection.CASH_IN ? 'Cash In' : 'Cash Out'}`,
+          title: resolvedTypeKey.includes('qrpayment')
+            ? `${dto.walletProvider} QR Payment`
+            : `${dto.walletProvider} ${dto.direction === TransactionDirection.CASH_IN ? 'Cash In' : 'Cash Out'}`,
           note: dto.note ?? '',
           reference,
           amount: resolvedAmount,
@@ -166,18 +171,22 @@ export class TransactionService {
       throw new BadRequestException('Amount must be greater than 0');
     }
 
+    const resolvedTypeKey =
+      transactionTypeKey ?? this.buildTransactionTypeKey(walletProvider, direction);
     const chargeRule = await this.chargeService.findApplicableCharge(
       amount,
-      transactionTypeKey ?? this.buildTransactionTypeKey(walletProvider, direction),
+      resolvedTypeKey,
     );
     const chargeAmount = chargeRule?.chargeAmount ?? 0;
 
-    const movement = this.buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandling);
+    const movement = this.buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandling, resolvedTypeKey);
     const currentWalletBalance = await this.getWalletBalance(walletProvider);
     const postTransactionWalletBalance = currentWalletBalance + movement.walletBalanceDelta;
 
     let feeRoutingExplanation: string;
-    if (direction === TransactionDirection.CASH_IN) {
+    if (resolvedTypeKey.includes('qrpayment')) {
+      feeRoutingExplanation = `QR Payment (Top-up): customer sends ₱${(amount + chargeAmount).toFixed(2)} via QR (₱${amount.toFixed(2)} + ₱${chargeAmount.toFixed(2)} service fee). Business wallet increases by ₱${(amount + chargeAmount).toFixed(2)}, no cash exchange.`;
+    } else if (direction === TransactionDirection.CASH_IN) {
       feeRoutingExplanation =
         chargeHandling === 'addOnTop'
           ? `Inflow: customer pays ₱${amount.toFixed(2)} + ₱${chargeAmount.toFixed(2)} in cash. Business wallet decreases by ₱${amount.toFixed(2)} and on-hand increases by ₱${(amount + chargeAmount).toFixed(2)}.`
@@ -226,6 +235,7 @@ export class TransactionService {
     amount: number,
     chargeAmount: number,
     chargeHandlingMode: 'addOnTop' | 'deductFromAmount' = 'addOnTop',
+    transactionTypeKey?: string,
   ): {
     walletBalanceDelta: number;
     walletDelta: number;
@@ -235,7 +245,12 @@ export class TransactionService {
     let walletBalanceDelta: number;
     let onHandDelta: number;
 
-    if (direction === TransactionDirection.CASH_IN) {
+    if (transactionTypeKey?.includes('qrpayment')) {
+      // QR Payment (Top-up): customer pays amount + fee digitally via QR scan.
+      // Store wallet increases by the full amount received; no cash exchange.
+      walletBalanceDelta = amount + chargeAmount;
+      onHandDelta = 0;
+    } else if (direction === TransactionDirection.CASH_IN) {
       // Inflow: customer gives cash → ALL cash goes to on-hand; store sends e-money from wallet to customer.
       // wallet decreases (store loads customer), on-hand increases (store received cash + fee)
       if (chargeHandlingMode === 'addOnTop') {

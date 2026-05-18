@@ -67,6 +67,9 @@ let PrismaService = PrismaService_1 = class PrismaService {
     get saleItem() {
         return this._client.saleItem;
     }
+    get feeTransaction() {
+        return this._client.feeTransaction;
+    }
     async $transaction(callback) {
         return this._client.$transaction(callback);
     }

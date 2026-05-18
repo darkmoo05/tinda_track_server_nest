@@ -10,6 +10,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { PosModule } from './modules/pos/pos.module';
+import { FeeTransactionModule } from './modules/fee-transaction/fee-transaction.module';
 
 /**
  * Root application module.
@@ -35,6 +36,7 @@ import { PosModule } from './modules/pos/pos.module';
     TransactionModule,
     InventoryModule,
     PosModule,
+    FeeTransactionModule,
   ],
 })
 export class AppModule {}
