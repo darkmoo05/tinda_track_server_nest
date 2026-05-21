@@ -74,6 +74,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this._client.product;
   }
 
+  get productCategory() {
+    return this._client.productCategory;
+  }
+
+  get shelfLocation() {
+    return this._client.shelfLocation;
+  }
+
   get stockMovement() {
     return this._client.stockMovement;
   }
@@ -88,6 +96,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get feeTransaction() {
     return this._client.feeTransaction;
+  }
+
+  get customer() {
+    return this._client.customer;
+  }
+
+  get utangRecord() {
+    return this._client.utangRecord;
   }
 
   async $transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {

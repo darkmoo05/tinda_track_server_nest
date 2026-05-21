@@ -190,25 +190,79 @@ model Transaction {
   @@map("transactions")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCT CATEGORY — user-managed lookup table for product classification.
+// `description` and `examples` populate the in-app management UI; the
+// `isQuickAccess` flag pins up to 10 categories to the dashboard chip row.
+// Synced from device to server via POST /inventory/categories/push.
+// ─────────────────────────────────────────────────────────────────────────────
+model ProductCategory {
+  id            String    @id @default(uuid())
+  syncId        String    @unique
+  name          String    @unique
+  description   String?   @default("")
+  examples      String?   @default("")
+  isQuickAccess Boolean   @default(false)
+  isDeleted     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  products      Product[]
+
+  @@map("product_categories")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHELF LOCATION — user-managed store zone / placement lookup table.
+// `imageUrl` is set after a successful PATCH /:id/image upload via the
+// global IStorageProvider; the local Flutter cache keeps the original
+// `image_path` so the UI can show the picture even while offline.
+// Synced from device to server via POST /inventory/shelf-locations/push.
+// ─────────────────────────────────────────────────────────────────────────────
+model ShelfLocation {
+  id          String    @id @default(uuid())
+  syncId      String    @unique
+  name        String    @unique
+  description String?   @default("")
+  examples    String?   @default("")
+  imageUrl    String?
+  isDeleted   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@map("shelf_locations")
+}
+
 model Product {
-  id             String          @id @default(uuid())
-  syncId         String?         @unique
-  deviceId       String?
-  name           String
-  sku            String          @unique
-  description    String          @default("")
-  category       String          @default("General")
-  unit           String          @default("pcs")
-  costPrice      Float           @default(0)
-  sellingPrice   Float
-  stockQuantity  Int             @default(0)
-  reorderPoint   Int             @default(0)
-  isActive       Boolean         @default(true)
-  isDeleted      Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  saleItems      SaleItem[]
-  stockMovements StockMovement[]
+  id                String           @id @default(uuid())
+  syncId            String?          @unique
+  deviceId          String?
+  name              String
+  sku               String           @unique
+  description       String           @default("")
+  // Denormalized name snapshot — always kept in sync with the relation.
+  category          String           @default("General")
+  unit              String           @default("pcs")
+  costPrice         Float            @default(0)
+  sellingPrice      Float
+  stockQuantity     Int              @default(0)
+  reorderPoint      Int              @default(0)
+  isActive          Boolean          @default(true)
+  isDeleted         Boolean          @default(false)
+  imageUrl          String?
+  // Denormalized name snapshot — always kept in sync with the relation.
+  shelfLocation     String?          @default("Counter")
+  expirationDate    DateTime?
+  // Optional FK relations — nullable so legacy products without a managed
+  // category/location row are never broken.
+  categoryId        String?
+  shelfLocationId   String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  productCategory   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  shelfLocationRef  ShelfLocation?   @relation(fields: [shelfLocationId], references: [id], onDelete: SetNull)
+  saleItems         SaleItem[]
+  stockMovements    StockMovement[]
 
   @@map("products")
 }
@@ -222,6 +276,7 @@ model StockMovement {
   newQuantity      Int
   note             String            @default("")
   reference        String            @default("")
+  expirationDate   DateTime?
   createdAt        DateTime          @default(now())
   product          Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -260,4 +315,31 @@ model SaleItem {
   @@index([saleId])
   @@index([productId])
   @@map("sale_items")
+}
+
+model Customer {
+  id          String        @id @default(uuid())
+  name        String
+  phone       String        @default("")
+  address     String        @default("")
+  notes       String        @default("")
+  isDeleted   Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  utangRecords UtangRecord[]
+
+  @@map("customers")
+}
+
+model UtangRecord {
+  id          String    @id @default(uuid())
+  customerId  String
+  description String    @default("")
+  amount      Float
+  isDeleted   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@map("utang_records")
 }

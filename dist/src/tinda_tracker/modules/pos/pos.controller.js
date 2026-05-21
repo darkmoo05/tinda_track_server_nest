@@ -30,6 +30,14 @@ let PosController = class PosController {
         const data = await this.posService.listSales(query);
         return { success: true, data };
     }
+    async getDashboard() {
+        const data = await this.posService.getDashboardStats();
+        return { success: true, data };
+    }
+    async getReports(query) {
+        const data = await this.posService.getReports(query);
+        return { success: true, data };
+    }
 };
 exports.PosController = PosController;
 __decorate([
@@ -47,6 +55,19 @@ __decorate([
     __metadata("design:paramtypes", [list_sales_query_dto_js_1.ListSalesQueryDto]),
     __metadata("design:returntype", Promise)
 ], PosController.prototype, "listSales", null);
+__decorate([
+    (0, common_1.Get)('dashboard'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], PosController.prototype, "getDashboard", null);
+__decorate([
+    (0, common_1.Get)('reports'),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [list_sales_query_dto_js_1.ListSalesQueryDto]),
+    __metadata("design:returntype", Promise)
+], PosController.prototype, "getReports", null);
 exports.PosController = PosController = __decorate([
     (0, common_1.Controller)('pos'),
     __metadata("design:paramtypes", [pos_service_js_1.PosService])

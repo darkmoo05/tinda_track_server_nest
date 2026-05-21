@@ -11,4 +11,8 @@ export declare class CreateProductDto {
     syncId?: string;
     deviceId?: string;
     isActive?: boolean;
+    shelfLocation?: string;
+    categorySyncId?: string;
+    shelfLocationSyncId?: string;
+    expirationDate?: string;
 }

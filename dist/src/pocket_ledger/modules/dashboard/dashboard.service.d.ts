@@ -10,10 +10,10 @@ export declare class DashboardService {
         recentEntries: {
             id: string;
             syncId: string;
-            deviceId: string;
             isDeleted: boolean;
             createdAt: Date;
             updatedAt: Date;
+            deviceId: string;
             walletAccount: string;
             entryType: string;
             title: string;

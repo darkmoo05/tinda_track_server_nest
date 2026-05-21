@@ -14,6 +14,8 @@ const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 class ListSalesQueryDto {
     limit = 20;
+    from;
+    to;
 }
 exports.ListSalesQueryDto = ListSalesQueryDto;
 __decorate([
@@ -22,4 +24,14 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
 ], ListSalesQueryDto.prototype, "limit", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ListSalesQueryDto.prototype, "from", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ListSalesQueryDto.prototype, "to", void 0);
 //# sourceMappingURL=list-sales-query.dto.js.map

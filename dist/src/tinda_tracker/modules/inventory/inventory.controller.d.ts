@@ -18,9 +18,17 @@ export declare class InventoryController {
         success: boolean;
         data: unknown;
     }>;
+    uploadImage(id: string, file: Express.Multer.File): Promise<{
+        success: boolean;
+        data: unknown;
+    }>;
     adjustStock(id: string, body: AdjustStockDto): Promise<{
         success: boolean;
         data: unknown;
+    }>;
+    getMovements(id: string): Promise<{
+        success: boolean;
+        data: unknown[];
     }>;
     remove(id: string): Promise<{
         success: boolean;

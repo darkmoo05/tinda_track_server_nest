@@ -58,6 +58,12 @@ let PrismaService = PrismaService_1 = class PrismaService {
     get product() {
         return this._client.product;
     }
+    get productCategory() {
+        return this._client.productCategory;
+    }
+    get shelfLocation() {
+        return this._client.shelfLocation;
+    }
     get stockMovement() {
         return this._client.stockMovement;
     }
@@ -69,6 +75,12 @@ let PrismaService = PrismaService_1 = class PrismaService {
     }
     get feeTransaction() {
         return this._client.feeTransaction;
+    }
+    get customer() {
+        return this._client.customer;
+    }
+    get utangRecord() {
+        return this._client.utangRecord;
     }
     async $transaction(callback) {
         return this._client.$transaction(callback);

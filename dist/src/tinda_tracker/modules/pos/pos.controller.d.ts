@@ -12,4 +12,12 @@ export declare class PosController {
         success: boolean;
         data: unknown[];
     }>;
+    getDashboard(): Promise<{
+        success: boolean;
+        data: unknown;
+    }>;
+    getReports(query: ListSalesQueryDto): Promise<{
+        success: boolean;
+        data: unknown;
+    }>;
 }

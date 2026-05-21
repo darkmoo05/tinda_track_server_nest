@@ -56,4 +56,20 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsString()
+  @IsOptional()
+  shelfLocation?: string;
+
+  @IsString()
+  @IsOptional()
+  categorySyncId?: string;
+
+  @IsString()
+  @IsOptional()
+  shelfLocationSyncId?: string;
+
+  @IsString()
+  @IsOptional()
+  expirationDate?: string;
 }

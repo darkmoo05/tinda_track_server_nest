@@ -9,14 +9,17 @@ export declare class PosService {
     listSales(query: ListSalesQueryDto): Promise<({
         saleItems: ({
             product: {
-                name: string;
                 id: string;
                 syncId: string | null;
-                deviceId: string | null;
+                name: string;
+                description: string;
                 isDeleted: boolean;
                 createdAt: Date;
                 updatedAt: Date;
-                description: string;
+                imageUrl: string | null;
+                shelfLocation: string | null;
+                deviceId: string | null;
+                expirationDate: Date | null;
                 sku: string;
                 category: string;
                 unit: string;
@@ -25,6 +28,8 @@ export declare class PosService {
                 stockQuantity: number;
                 reorderPoint: number;
                 isActive: boolean;
+                categoryId: string | null;
+                shelfLocationId: string | null;
             };
         } & {
             id: string;
@@ -37,9 +42,9 @@ export declare class PosService {
         })[];
     } & {
         id: string;
-        deviceId: string | null;
         createdAt: Date;
         updatedAt: Date;
+        deviceId: string | null;
         note: string;
         reference: string;
         totalAmount: number;
@@ -48,5 +53,45 @@ export declare class PosService {
         changeAmount: number;
         totalItems: number;
     })[]>;
+    getDashboardStats(): Promise<{
+        today: {
+            totalSales: number;
+            profit: number;
+            transactions: number;
+        };
+        lowStockProducts: {
+            id: string;
+            name: string;
+            sellingPrice: number;
+            stockQuantity: number;
+            reorderPoint: number;
+        }[];
+        totalOutstandingUtang: number;
+        topProductsThisWeek: {
+            name: string;
+            qty: number;
+            revenue: number;
+            productId: string;
+        }[];
+    }>;
+    getReports(query: ListSalesQueryDto): Promise<{
+        summary: {
+            totalSales: number;
+            totalProfit: number;
+            totalTransactions: number;
+        };
+        daily: {
+            date: string;
+            sales: number;
+            profit: number;
+            transactions: number;
+        }[];
+        topProducts: {
+            name: string;
+            qty: number;
+            revenue: number;
+            productId: string;
+        }[];
+    }>;
     private buildReference;
 }

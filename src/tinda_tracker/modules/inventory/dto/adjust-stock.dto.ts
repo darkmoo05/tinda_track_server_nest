@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsISO8601, IsOptional, IsString } from 'class-validator';
 import { StockMovementType } from '@prisma/client';
 
 export class AdjustStockDto {
@@ -18,4 +18,8 @@ export class AdjustStockDto {
   @IsString()
   @IsOptional()
   reference?: string;
+
+  @IsISO8601()
+  @IsOptional()
+  expirationDate?: string;
 }

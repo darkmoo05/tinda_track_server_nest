@@ -25,6 +25,10 @@ class CreateProductDto {
     syncId;
     deviceId;
     isActive;
+    shelfLocation;
+    categorySyncId;
+    shelfLocationSyncId;
+    expirationDate;
 }
 exports.CreateProductDto = CreateProductDto;
 __decorate([
@@ -94,4 +98,24 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Boolean)
 ], CreateProductDto.prototype, "isActive", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "shelfLocation", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "categorySyncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "shelfLocationSyncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateProductDto.prototype, "expirationDate", void 0);
 //# sourceMappingURL=create-product.dto.js.map

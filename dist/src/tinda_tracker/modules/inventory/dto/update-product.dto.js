@@ -24,6 +24,10 @@ class UpdateProductDto {
     reorderPoint;
     deviceId;
     isActive;
+    shelfLocation;
+    categorySyncId;
+    shelfLocationSyncId;
+    expirationDate;
 }
 exports.UpdateProductDto = UpdateProductDto;
 __decorate([
@@ -89,4 +93,24 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Boolean)
 ], UpdateProductDto.prototype, "isActive", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "shelfLocation", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "categorySyncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "shelfLocationSyncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateProductDto.prototype, "expirationDate", void 0);
 //# sourceMappingURL=update-product.dto.js.map

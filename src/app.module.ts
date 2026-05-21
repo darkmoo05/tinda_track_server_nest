@@ -13,6 +13,7 @@ import { FeeTransactionModule } from './pocket_ledger/modules/fee-transaction/fe
 // ── TindaTracker modules ──────────────────────────────────────────────────
 import { InventoryModule } from './tinda_tracker/modules/inventory/inventory.module';
 import { PosModule } from './tinda_tracker/modules/pos/pos.module';
+import { CustomersModule } from './tinda_tracker/modules/customers/customers.module';
 
 /**
  * Root application module.
@@ -38,6 +39,7 @@ import { PosModule } from './tinda_tracker/modules/pos/pos.module';
     TransactionModule,
     InventoryModule,
     PosModule,
+    CustomersModule,
     FeeTransactionModule,
   ],
 })

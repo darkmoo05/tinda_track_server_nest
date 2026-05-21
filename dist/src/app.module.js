@@ -20,6 +20,7 @@ const transaction_module_1 = require("./pocket_ledger/modules/transaction/transa
 const fee_transaction_module_1 = require("./pocket_ledger/modules/fee-transaction/fee-transaction.module");
 const inventory_module_1 = require("./tinda_tracker/modules/inventory/inventory.module");
 const pos_module_1 = require("./tinda_tracker/modules/pos/pos.module");
+const customers_module_1 = require("./tinda_tracker/modules/customers/customers.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -37,6 +38,7 @@ exports.AppModule = AppModule = __decorate([
             transaction_module_1.TransactionModule,
             inventory_module_1.InventoryModule,
             pos_module_1.PosModule,
+            customers_module_1.CustomersModule,
             fee_transaction_module_1.FeeTransactionModule,
         ],
     })

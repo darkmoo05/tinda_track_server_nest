@@ -18,6 +18,7 @@ class AdjustStockDto {
     movementType;
     note;
     reference;
+    expirationDate;
 }
 exports.AdjustStockDto = AdjustStockDto;
 __decorate([
@@ -40,4 +41,9 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], AdjustStockDto.prototype, "reference", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], AdjustStockDto.prototype, "expirationDate", void 0);
 //# sourceMappingURL=adjust-stock.dto.js.map

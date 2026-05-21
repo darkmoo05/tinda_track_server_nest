@@ -4,4 +4,5 @@ export declare class AdjustStockDto {
     movementType?: StockMovementType;
     note?: string;
     reference?: string;
+    expirationDate?: string;
 }

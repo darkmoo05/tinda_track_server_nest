@@ -118,17 +118,134 @@ let PosService = class PosService {
         });
     }
     async listSales(query) {
+        const fromDate = query.from ? new Date(query.from) : undefined;
+        const toDate = query.to ? new Date(query.to) : undefined;
         return this.prisma.sale.findMany({
+            where: {
+                ...(fromDate || toDate
+                    ? {
+                        createdAt: {
+                            ...(fromDate ? { gte: fromDate } : {}),
+                            ...(toDate ? { lte: toDate } : {}),
+                        },
+                    }
+                    : {}),
+            },
             include: {
                 saleItems: {
-                    include: {
-                        product: true,
-                    },
+                    include: { product: true },
                 },
             },
             orderBy: { createdAt: 'desc' },
             take: query.limit ?? 20,
         });
+    }
+    async getDashboardStats() {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - 6);
+        weekStart.setHours(0, 0, 0, 0);
+        const [todaySales, lowStockProducts, weekSales, totalUtang] = await Promise.all([
+            this.prisma.sale.findMany({
+                where: { createdAt: { gte: todayStart, lte: todayEnd } },
+                include: { saleItems: { include: { product: true } } },
+            }),
+            this.prisma.product.findMany({
+                where: { isDeleted: false, isActive: true },
+                select: { id: true, name: true, stockQuantity: true, reorderPoint: true, sellingPrice: true },
+            }),
+            this.prisma.sale.findMany({
+                where: { createdAt: { gte: weekStart } },
+                include: { saleItems: { include: { product: true } } },
+            }),
+            this.prisma.utangRecord.aggregate({
+                where: { isDeleted: false },
+                _sum: { amount: true },
+            }),
+        ]);
+        const todayTotalSales = todaySales.reduce((s, sale) => s + sale.totalAmount, 0);
+        const todayProfit = todaySales.reduce((s, sale) => {
+            const profit = sale.saleItems.reduce((sp, item) => {
+                const cost = item.product.costPrice ?? 0;
+                return sp + (item.unitPrice - cost) * item.quantity;
+            }, 0);
+            return s + profit;
+        }, 0);
+        const lowStock = lowStockProducts.filter((p) => p.stockQuantity <= p.reorderPoint);
+        const productSalesMap = new Map();
+        for (const sale of weekSales) {
+            for (const item of sale.saleItems) {
+                const existing = productSalesMap.get(item.productId) ?? {
+                    name: item.product.name,
+                    qty: 0,
+                    revenue: 0,
+                };
+                existing.qty += item.quantity;
+                existing.revenue += item.lineTotal;
+                productSalesMap.set(item.productId, existing);
+            }
+        }
+        const topProducts = [...productSalesMap.entries()]
+            .sort((a, b) => b[1].qty - a[1].qty)
+            .slice(0, 5)
+            .map(([productId, stats]) => ({ productId, ...stats }));
+        return {
+            today: {
+                totalSales: todayTotalSales,
+                profit: todayProfit,
+                transactions: todaySales.length,
+            },
+            lowStockProducts: lowStock,
+            totalOutstandingUtang: totalUtang._sum.amount ?? 0,
+            topProductsThisWeek: topProducts,
+        };
+    }
+    async getReports(query) {
+        const fromDate = query.from ? new Date(query.from) : (() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0, 0, 0, 0); return d; })();
+        const toDate = query.to ? new Date(query.to) : new Date();
+        const sales = await this.prisma.sale.findMany({
+            where: { createdAt: { gte: fromDate, lte: toDate } },
+            include: { saleItems: { include: { product: true } } },
+            orderBy: { createdAt: 'asc' },
+        });
+        const totalSales = sales.reduce((s, sale) => s + sale.totalAmount, 0);
+        const totalProfit = sales.reduce((s, sale) => {
+            return s + sale.saleItems.reduce((sp, item) => {
+                return sp + (item.unitPrice - (item.product.costPrice ?? 0)) * item.quantity;
+            }, 0);
+        }, 0);
+        const dailyMap = new Map();
+        for (const sale of sales) {
+            const dateKey = sale.createdAt.toISOString().slice(0, 10);
+            const existing = dailyMap.get(dateKey) ?? { date: dateKey, sales: 0, profit: 0, transactions: 0 };
+            existing.sales += sale.totalAmount;
+            existing.profit += sale.saleItems.reduce((sp, item) => {
+                return sp + (item.unitPrice - (item.product.costPrice ?? 0)) * item.quantity;
+            }, 0);
+            existing.transactions++;
+            dailyMap.set(dateKey, existing);
+        }
+        const productMap = new Map();
+        for (const sale of sales) {
+            for (const item of sale.saleItems) {
+                const existing = productMap.get(item.productId) ?? { name: item.product.name, qty: 0, revenue: 0 };
+                existing.qty += item.quantity;
+                existing.revenue += item.lineTotal;
+                productMap.set(item.productId, existing);
+            }
+        }
+        const topProducts = [...productMap.entries()]
+            .sort((a, b) => b[1].revenue - a[1].revenue)
+            .slice(0, 10)
+            .map(([productId, stats]) => ({ productId, ...stats }));
+        return {
+            summary: { totalSales, totalProfit, totalTransactions: sales.length },
+            daily: [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date)),
+            topProducts,
+        };
     }
     buildReference() {
         return `SALE-${(0, node_crypto_1.randomUUID)().slice(0, 8).toUpperCase()}`;

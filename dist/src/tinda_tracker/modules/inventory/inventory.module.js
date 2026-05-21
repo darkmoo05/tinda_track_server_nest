@@ -8,15 +8,22 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.InventoryModule = void 0;
 const common_1 = require("@nestjs/common");
+const categories_controller_js_1 = require("./categories.controller.js");
 const inventory_controller_js_1 = require("./inventory.controller.js");
 const inventory_service_js_1 = require("./inventory.service.js");
+const shelf_locations_controller_js_1 = require("./shelf-locations.controller.js");
+const local_storage_provider_js_1 = require("../../../core/storage/local-storage.provider.js");
+const storage_provider_interface_js_1 = require("../../../core/storage/storage-provider.interface.js");
 let InventoryModule = class InventoryModule {
 };
 exports.InventoryModule = InventoryModule;
 exports.InventoryModule = InventoryModule = __decorate([
     (0, common_1.Module)({
-        controllers: [inventory_controller_js_1.InventoryController],
-        providers: [inventory_service_js_1.InventoryService],
+        controllers: [inventory_controller_js_1.InventoryController, categories_controller_js_1.CategoriesController, shelf_locations_controller_js_1.ShelfLocationsController],
+        providers: [
+            inventory_service_js_1.InventoryService,
+            { provide: storage_provider_interface_js_1.STORAGE_PROVIDER, useClass: local_storage_provider_js_1.LocalStorageProvider },
+        ],
         exports: [inventory_service_js_1.InventoryService],
     })
 ], InventoryModule);

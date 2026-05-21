@@ -10,4 +10,8 @@ export declare class UpdateProductDto {
     reorderPoint?: number;
     deviceId?: string;
     isActive?: boolean;
+    shelfLocation?: string;
+    categorySyncId?: string;
+    shelfLocationSyncId?: string;
+    expirationDate?: string;
 }

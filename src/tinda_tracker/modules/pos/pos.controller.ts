@@ -19,4 +19,16 @@ export class PosController {
     const data = await this.posService.listSales(query);
     return { success: true, data };
   }
+
+  @Get('dashboard')
+  async getDashboard(): Promise<{ success: boolean; data: unknown }> {
+    const data = await this.posService.getDashboardStats();
+    return { success: true, data };
+  }
+
+  @Get('reports')
+  async getReports(@Query() query: ListSalesQueryDto): Promise<{ success: boolean; data: unknown }> {
+    const data = await this.posService.getReports(query);
+    return { success: true, data };
+  }
 }

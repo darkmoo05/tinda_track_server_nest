@@ -15,9 +15,13 @@ export declare class PrismaService implements OnModuleInit, OnModuleDestroy {
     get ledgerEntry(): import("@prisma/client").Prisma.LedgerEntryDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     get transaction(): import("@prisma/client").Prisma.TransactionDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     get product(): import("@prisma/client").Prisma.ProductDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    get productCategory(): import("@prisma/client").Prisma.ProductCategoryDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    get shelfLocation(): import("@prisma/client").Prisma.ShelfLocationDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     get stockMovement(): import("@prisma/client").Prisma.StockMovementDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     get sale(): import("@prisma/client").Prisma.SaleDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     get saleItem(): import("@prisma/client").Prisma.SaleItemDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     get feeTransaction(): import("@prisma/client").Prisma.FeeTransactionDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    get customer(): import("@prisma/client").Prisma.CustomerDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    get utangRecord(): import("@prisma/client").Prisma.UtangRecordDelegate<import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     $transaction<T>(callback: (client: any) => Promise<T>): Promise<T>;
 }
