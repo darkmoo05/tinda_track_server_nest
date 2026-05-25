@@ -63,25 +63,42 @@ let InventoryService = class InventoryService {
             sku: dto.sku,
             description: dto.description ?? '',
             category: resolvedCategory,
-            unit: dto.unit ?? 'pcs',
+            baseUnit: dto.baseUnit ?? 'pcs',
             costPrice: dto.costPrice ?? 0,
             sellingPrice: dto.sellingPrice,
-            stockQuantity: dto.stockQuantity ?? 0,
+            stockInBaseUnit: dto.stockInBaseUnit ?? 0,
             reorderPoint: dto.reorderPoint ?? 0,
             isActive: dto.isActive ?? true,
             shelfLocation: resolvedShelfLocation,
             ...(categoryId ? { categoryId } : {}),
             ...(shelfLocationId ? { shelfLocationId } : {}),
             ...(dto.expirationDate ? { expirationDate: new Date(dto.expirationDate) } : {}),
+            ...(dto.unitConversions && dto.unitConversions.length > 0
+                ? {
+                    unitConversions: {
+                        create: dto.unitConversions.map((c) => ({
+                            syncId: c.syncId ?? (0, node_crypto_1.randomUUID)(),
+                            unitName: c.unitName,
+                            conversionFactor: c.conversionFactor,
+                            costPrice: c.costPrice,
+                            sellingPrice: c.sellingPrice,
+                        })),
+                    },
+                }
+                : {}),
         };
         if (dto.syncId) {
             return this.prisma.product.upsert({
                 where: { syncId: dto.syncId },
                 create: { syncId: dto.syncId, ...fields },
                 update: {},
+                include: { unitConversions: true },
             });
         }
-        return this.prisma.product.create({ data: fields });
+        return this.prisma.product.create({
+            data: fields,
+            include: { unitConversions: true },
+        });
     }
     async list(query) {
         return this.prisma.product.findMany({
@@ -99,6 +116,7 @@ let InventoryService = class InventoryService {
             },
             orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
             take: query.limit ?? 50,
+            include: { unitConversions: true },
         });
     }
     async update(productId, dto) {
@@ -128,10 +146,12 @@ let InventoryService = class InventoryService {
                 ...(dto.sku !== undefined ? { sku: dto.sku } : {}),
                 ...(dto.description !== undefined ? { description: dto.description } : {}),
                 ...(resolvedCategory !== undefined ? { category: resolvedCategory } : {}),
-                ...(dto.unit !== undefined ? { unit: dto.unit } : {}),
+                ...(dto.baseUnit !== undefined ? { baseUnit: dto.baseUnit } : {}),
                 ...(dto.costPrice !== undefined ? { costPrice: dto.costPrice } : {}),
                 ...(dto.sellingPrice !== undefined ? { sellingPrice: dto.sellingPrice } : {}),
-                ...(dto.stockQuantity !== undefined ? { stockQuantity: dto.stockQuantity } : {}),
+                ...(dto.stockInBaseUnit !== undefined
+                    ? { stockInBaseUnit: dto.stockInBaseUnit }
+                    : {}),
                 ...(dto.reorderPoint !== undefined ? { reorderPoint: dto.reorderPoint } : {}),
                 ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
                 ...(dto.deviceId !== undefined ? { deviceId: dto.deviceId } : {}),
@@ -141,7 +161,22 @@ let InventoryService = class InventoryService {
                 ...(dto.expirationDate !== undefined
                     ? { expirationDate: dto.expirationDate ? new Date(dto.expirationDate) : null }
                     : {}),
+                ...(dto.unitConversions
+                    ? {
+                        unitConversions: {
+                            deleteMany: {},
+                            create: dto.unitConversions.map((c) => ({
+                                syncId: c.syncId ?? (0, node_crypto_1.randomUUID)(),
+                                unitName: c.unitName,
+                                conversionFactor: c.conversionFactor,
+                                costPrice: c.costPrice,
+                                sellingPrice: c.sellingPrice,
+                            })),
+                        },
+                    }
+                    : {}),
             },
+            include: { unitConversions: true },
         });
     }
     async updateImage(productId, file) {
@@ -169,14 +204,14 @@ let InventoryService = class InventoryService {
             if (!product || product.isDeleted) {
                 throw new common_1.NotFoundException('Product not found');
             }
-            const previousQuantity = product.stockQuantity;
+            const previousQuantity = product.stockInBaseUnit;
             const newQuantity = previousQuantity + dto.quantityDelta;
             if (newQuantity < 0) {
                 throw new common_1.BadRequestException('Stock quantity cannot go below zero');
             }
             const updatedProduct = await client.product.update({
                 where: { id: productId },
-                data: { stockQuantity: newQuantity },
+                data: { stockInBaseUnit: newQuantity },
             });
             const movement = await client.stockMovement.create({
                 data: {

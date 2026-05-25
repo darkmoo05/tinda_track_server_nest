@@ -12,15 +12,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateProductDto = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
+const product_unit_conversion_dto_js_1 = require("./product-unit-conversion.dto.js");
 class UpdateProductDto {
     name;
     sku;
     description;
     category;
-    unit;
+    baseUnit;
     sellingPrice;
     costPrice;
-    stockQuantity;
+    stockInBaseUnit;
     reorderPoint;
     deviceId;
     isActive;
@@ -28,6 +29,7 @@ class UpdateProductDto {
     categorySyncId;
     shelfLocationSyncId;
     expirationDate;
+    unitConversions;
 }
 exports.UpdateProductDto = UpdateProductDto;
 __decorate([
@@ -54,7 +56,7 @@ __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
-], UpdateProductDto.prototype, "unit", void 0);
+], UpdateProductDto.prototype, "baseUnit", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
@@ -71,11 +73,11 @@ __decorate([
 ], UpdateProductDto.prototype, "costPrice", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
-], UpdateProductDto.prototype, "stockQuantity", void 0);
+], UpdateProductDto.prototype, "stockInBaseUnit", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsInt)(),
@@ -113,4 +115,11 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], UpdateProductDto.prototype, "expirationDate", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => product_unit_conversion_dto_js_1.ProductUnitConversionDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], UpdateProductDto.prototype, "unitConversions", void 0);
 //# sourceMappingURL=update-product.dto.js.map

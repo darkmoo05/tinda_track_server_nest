@@ -1,12 +1,13 @@
+import { ProductUnitConversionDto } from './product-unit-conversion.dto.js';
 export declare class UpdateProductDto {
     name?: string;
     sku?: string;
     description?: string;
     category?: string;
-    unit?: string;
+    baseUnit?: string;
     sellingPrice?: number;
     costPrice?: number;
-    stockQuantity?: number;
+    stockInBaseUnit?: number;
     reorderPoint?: number;
     deviceId?: string;
     isActive?: boolean;
@@ -14,4 +15,5 @@ export declare class UpdateProductDto {
     categorySyncId?: string;
     shelfLocationSyncId?: string;
     expirationDate?: string;
+    unitConversions?: ProductUnitConversionDto[];
 }

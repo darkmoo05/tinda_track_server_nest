@@ -1,6 +1,9 @@
 declare class CheckoutPosItemDto {
     productId: string;
     quantity: number;
+    selectedUnit?: string;
+    unitPrice?: number;
+    computedBaseQuantity?: number;
 }
 export declare class CheckoutPosDto {
     items: CheckoutPosItemDto[];

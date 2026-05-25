@@ -9,41 +9,43 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AdjustStockDto = void 0;
+exports.ProductUnitConversionDto = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
-const client_1 = require("@prisma/client");
-class AdjustStockDto {
-    quantityDelta;
-    movementType;
-    note;
-    reference;
-    expirationDate;
+class ProductUnitConversionDto {
+    syncId;
+    unitName;
+    conversionFactor;
+    costPrice;
+    sellingPrice;
 }
-exports.AdjustStockDto = AdjustStockDto;
+exports.ProductUnitConversionDto = ProductUnitConversionDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ProductUnitConversionDto.prototype, "syncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], ProductUnitConversionDto.prototype, "unitName", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0.0000001),
     __metadata("design:type", Number)
-], AdjustStockDto.prototype, "quantityDelta", void 0);
+], ProductUnitConversionDto.prototype, "conversionFactor", void 0);
 __decorate([
-    (0, class_validator_1.IsEnum)(client_1.StockMovementType),
-    (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", String)
-], AdjustStockDto.prototype, "movementType", void 0);
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], ProductUnitConversionDto.prototype, "costPrice", void 0);
 __decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", String)
-], AdjustStockDto.prototype, "note", void 0);
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", String)
-], AdjustStockDto.prototype, "reference", void 0);
-__decorate([
-    (0, class_validator_1.IsISO8601)(),
-    (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", String)
-], AdjustStockDto.prototype, "expirationDate", void 0);
-//# sourceMappingURL=adjust-stock.dto.js.map
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], ProductUnitConversionDto.prototype, "sellingPrice", void 0);
+//# sourceMappingURL=product-unit-conversion.dto.js.map

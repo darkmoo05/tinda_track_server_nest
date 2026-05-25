@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { Product, Sale } from '@prisma/client';
+import type { Product, ProductUnitConversion, Sale } from '@prisma/client';
 import { StockMovementType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { CheckoutPosDto } from './dto/checkout-pos.dto.js';
@@ -17,9 +17,14 @@ export class PosService {
 
     return this.prisma.$transaction(async (client) => {
       const uniqueProductIds = [...new Set(dto.items.map((item) => item.productId))];
-      const products: Product[] = await client.product.findMany({
-        where: { id: { in: uniqueProductIds }, isDeleted: false, isActive: true },
-      });
+      const [products, conversions] = await Promise.all([
+        client.product.findMany({
+          where: { id: { in: uniqueProductIds }, isDeleted: false, isActive: true },
+        }),
+        client.productUnitConversion.findMany({
+          where: { productId: { in: uniqueProductIds } },
+        }),
+      ]);
 
       if (products.length !== uniqueProductIds.length) {
         throw new NotFoundException('One or more products were not found');
@@ -28,20 +33,86 @@ export class PosService {
       const productById = new Map<string, Product>(
         products.map((product) => [product.id, product]),
       );
+      const conversionsByProductId = new Map<string, ProductUnitConversion[]>();
+      for (const conversion of conversions) {
+        const list = conversionsByProductId.get(conversion.productId) ?? [];
+        list.push(conversion);
+        conversionsByProductId.set(conversion.productId, list);
+      }
+
       const lineItems = dto.items.map((item) => {
         const product = productById.get(item.productId);
         if (!product) {
           throw new NotFoundException(`Product ${item.productId} not found`);
         }
-        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
-          throw new BadRequestException('Each checkout item must have a positive whole-number quantity');
+
+        if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+          throw new BadRequestException('Please enter a valid quantity greater than zero for each item.');
         }
-        if (product.stockQuantity < item.quantity) {
+
+        const selectedUnit = (item.selectedUnit?.trim() || product.baseUnit).toLowerCase();
+        const baseUnit = product.baseUnit.toLowerCase();
+        const matchedConversion = (conversionsByProductId.get(product.id) ?? []).find(
+          (c) => c.unitName.toLowerCase() === selectedUnit,
+        );
+
+        const conversionFactor =
+          selectedUnit === baseUnit
+            ? 1
+            : matchedConversion?.conversionFactor;
+
+        if (!conversionFactor || conversionFactor <= 0) {
+          throw new BadRequestException(
+            `Unit \"${item.selectedUnit ?? product.baseUnit}\" is not configured for ${product.name}.`,
+          );
+        }
+
+        const computedBaseQuantity = item.computedBaseQuantity ?? item.quantity * conversionFactor;
+        if (computedBaseQuantity <= 0) {
+          throw new BadRequestException('Computed stock quantity must be greater than zero.');
+        }
+
+        const appliedUnitPrice =
+          item.unitPrice ??
+          (selectedUnit === baseUnit
+            ? product.sellingPrice
+            : Number(matchedConversion?.sellingPrice ?? product.sellingPrice));
+
+        if (appliedUnitPrice < 0) {
+          throw new BadRequestException('Unit price cannot be negative.');
+        }
+
+        if (product.stockInBaseUnit < computedBaseQuantity) {
           throw new BadRequestException(`Insufficient stock for ${product.name}`);
         }
-        const lineTotal = product.sellingPrice * item.quantity;
-        return { item, product, lineTotal };
+
+        const lineTotal = appliedUnitPrice * item.quantity;
+        return {
+          item,
+          product,
+          selectedUnit: item.selectedUnit?.trim() || product.baseUnit,
+          appliedUnitPrice,
+          computedBaseQuantity,
+          lineTotal,
+        };
       });
+
+      const deductionByProductId = new Map<string, number>();
+      for (const entry of lineItems) {
+        deductionByProductId.set(
+          entry.product.id,
+          (deductionByProductId.get(entry.product.id) ?? 0) + entry.computedBaseQuantity,
+        );
+      }
+
+      for (const [productId, totalDeduction] of deductionByProductId.entries()) {
+        const product = productById.get(productId);
+        if (!product || product.stockInBaseUnit < totalDeduction) {
+          throw new BadRequestException(
+            `Kulang ang stocks for ${product?.name ?? 'this product'}. Please reduce the quantity.`,
+          );
+        }
+      }
 
       const subtotal = lineItems.reduce((sum, entry) => sum + entry.lineTotal, 0);
       if (dto.paidAmount < subtotal) {
@@ -49,7 +120,7 @@ export class PosService {
       }
 
       const changeAmount = dto.paidAmount - subtotal;
-      const totalItems = lineItems.reduce((sum, entry) => sum + entry.item.quantity, 0);
+      const totalItems = lineItems.length;
       const reference = dto.reference?.trim() || this.buildReference();
 
       const sale = await client.sale.create({
@@ -66,29 +137,45 @@ export class PosService {
       });
 
       for (const entry of lineItems) {
-        const previousQuantity = entry.product.stockQuantity;
-        const newQuantity = previousQuantity - entry.item.quantity;
-
         await client.saleItem.create({
           data: {
             saleId: sale.id,
             productId: entry.product.id,
+            selectedUnit: entry.selectedUnit,
             quantity: entry.item.quantity,
-            unitPrice: entry.product.sellingPrice,
+            unitPrice: entry.appliedUnitPrice,
+            computedBaseQuantity: entry.computedBaseQuantity,
             lineTotal: entry.lineTotal,
           },
         });
+      }
 
-        await client.product.update({
-          where: { id: entry.product.id },
-          data: { stockQuantity: newQuantity },
+      for (const [productId, deduction] of deductionByProductId.entries()) {
+        const product = productById.get(productId);
+        if (!product) continue;
+
+        const previousQuantity = product.stockInBaseUnit;
+        const updateResult = await client.product.updateMany({
+          where: { id: productId, stockInBaseUnit: { gte: deduction } },
+          data: { stockInBaseUnit: { decrement: deduction } },
         });
+        if (updateResult.count === 0) {
+          throw new BadRequestException(
+            `Kulang ang stocks for ${product.name}. Please refresh and try again.`,
+          );
+        }
+
+        const updatedProduct = await client.product.findUnique({
+          where: { id: productId },
+          select: { stockInBaseUnit: true },
+        });
+        const newQuantity = updatedProduct?.stockInBaseUnit ?? previousQuantity - deduction;
 
         await client.stockMovement.create({
           data: {
-            productId: entry.product.id,
+            productId,
             movementType: StockMovementType.SALE,
-            quantity: -entry.item.quantity,
+            quantity: -deduction,
             previousQuantity,
             newQuantity,
             note: dto.note ?? '',
@@ -165,7 +252,13 @@ export class PosService {
       }),
       this.prisma.product.findMany({
         where: { isDeleted: false, isActive: true },
-        select: { id: true, name: true, stockQuantity: true, reorderPoint: true, sellingPrice: true },
+        select: {
+          id: true,
+          name: true,
+          stockInBaseUnit: true,
+          reorderPoint: true,
+          sellingPrice: true,
+        },
       }),
       this.prisma.sale.findMany({
         where: { createdAt: { gte: weekStart } },
@@ -181,12 +274,14 @@ export class PosService {
     const todayProfit = todaySales.reduce((s, sale) => {
       const profit = sale.saleItems.reduce((sp, item) => {
         const cost = item.product.costPrice ?? 0;
-        return sp + (item.unitPrice - cost) * item.quantity;
+        return sp + (Number(item.unitPrice) - cost) * item.quantity;
       }, 0);
       return s + profit;
     }, 0);
 
-    const lowStock = lowStockProducts.filter((p) => p.stockQuantity <= p.reorderPoint);
+    const lowStock = lowStockProducts.filter(
+      (p) => p.stockInBaseUnit <= p.reorderPoint,
+    );
 
     // Top 5 selling items this week
     const productSalesMap = new Map<string, { name: string; qty: number; revenue: number }>();
@@ -232,7 +327,7 @@ export class PosService {
     const totalSales = sales.reduce((s, sale) => s + sale.totalAmount, 0);
     const totalProfit = sales.reduce((s, sale) => {
       return s + sale.saleItems.reduce((sp, item) => {
-        return sp + (item.unitPrice - (item.product.costPrice ?? 0)) * item.quantity;
+        return sp + (Number(item.unitPrice) - (item.product.costPrice ?? 0)) * item.quantity;
       }, 0);
     }, 0);
 
@@ -243,7 +338,7 @@ export class PosService {
       const existing = dailyMap.get(dateKey) ?? { date: dateKey, sales: 0, profit: 0, transactions: 0 };
       existing.sales += sale.totalAmount;
       existing.profit += sale.saleItems.reduce((sp, item) => {
-        return sp + (item.unitPrice - (item.product.costPrice ?? 0)) * item.quantity;
+        return sp + (Number(item.unitPrice) - (item.product.costPrice ?? 0)) * item.quantity;
       }, 0);
       existing.transactions++;
       dailyMap.set(dateKey, existing);

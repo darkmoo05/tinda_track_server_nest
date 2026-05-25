@@ -20,12 +20,12 @@ export declare class PosService {
                 shelfLocation: string | null;
                 deviceId: string | null;
                 expirationDate: Date | null;
+                costPrice: number;
+                sellingPrice: number;
                 sku: string;
                 category: string;
-                unit: string;
-                sellingPrice: number;
-                costPrice: number;
-                stockQuantity: number;
+                baseUnit: string;
+                stockInBaseUnit: number;
                 reorderPoint: number;
                 isActive: boolean;
                 categoryId: string | null;
@@ -36,8 +36,10 @@ export declare class PosService {
             createdAt: Date;
             productId: string;
             quantity: number;
+            selectedUnit: string;
+            unitPrice: import("@prisma/client-runtime-utils").Decimal;
+            computedBaseQuantity: number;
             saleId: string;
-            unitPrice: number;
             lineTotal: number;
         })[];
     } & {
@@ -63,7 +65,7 @@ export declare class PosService {
             id: string;
             name: string;
             sellingPrice: number;
-            stockQuantity: number;
+            stockInBaseUnit: number;
             reorderPoint: number;
         }[];
         totalOutstandingUtang: number;

@@ -12,15 +12,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateProductDto = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
+const product_unit_conversion_dto_js_1 = require("./product-unit-conversion.dto.js");
 class CreateProductDto {
     name;
     sku;
     description;
     category;
-    unit;
+    baseUnit;
     sellingPrice;
     costPrice;
-    stockQuantity;
+    stockInBaseUnit;
     reorderPoint;
     syncId;
     deviceId;
@@ -29,6 +30,7 @@ class CreateProductDto {
     categorySyncId;
     shelfLocationSyncId;
     expirationDate;
+    unitConversions;
 }
 exports.CreateProductDto = CreateProductDto;
 __decorate([
@@ -55,7 +57,7 @@ __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
-], CreateProductDto.prototype, "unit", void 0);
+], CreateProductDto.prototype, "baseUnit", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
@@ -71,11 +73,11 @@ __decorate([
 ], CreateProductDto.prototype, "costPrice", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
-], CreateProductDto.prototype, "stockQuantity", void 0);
+], CreateProductDto.prototype, "stockInBaseUnit", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsInt)(),
@@ -118,4 +120,11 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateProductDto.prototype, "expirationDate", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => product_unit_conversion_dto_js_1.ProductUnitConversionDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], CreateProductDto.prototype, "unitConversions", void 0);
 //# sourceMappingURL=create-product.dto.js.map

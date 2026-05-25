@@ -1,5 +1,14 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 
 class CheckoutPosItemDto {
   @IsString()
@@ -7,7 +16,25 @@ class CheckoutPosItemDto {
   productId!: string;
 
   @Type(() => Number)
+  @IsNumber()
+  @Min(0.000001)
   quantity!: number;
+
+  @IsString()
+  @IsOptional()
+  selectedUnit?: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  unitPrice?: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  computedBaseQuantity?: number;
 }
 
 export class CheckoutPosDto {
@@ -18,6 +45,8 @@ export class CheckoutPosDto {
   items!: CheckoutPosItemDto[];
 
   @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   paidAmount!: number;
 
   @IsString()

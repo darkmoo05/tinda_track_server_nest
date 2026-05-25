@@ -15,6 +15,9 @@ const class_validator_1 = require("class-validator");
 class CheckoutPosItemDto {
     productId;
     quantity;
+    selectedUnit;
+    unitPrice;
+    computedBaseQuantity;
 }
 exports.CheckoutPosItemDto = CheckoutPosItemDto;
 __decorate([
@@ -24,8 +27,29 @@ __decorate([
 ], CheckoutPosItemDto.prototype, "productId", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0.000001),
     __metadata("design:type", Number)
 ], CheckoutPosItemDto.prototype, "quantity", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CheckoutPosItemDto.prototype, "selectedUnit", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CheckoutPosItemDto.prototype, "unitPrice", void 0);
+__decorate([
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CheckoutPosItemDto.prototype, "computedBaseQuantity", void 0);
 class CheckoutPosDto {
     items;
     paidAmount;
@@ -43,6 +67,8 @@ __decorate([
 ], CheckoutPosDto.prototype, "items", void 0);
 __decorate([
     (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CheckoutPosDto.prototype, "paidAmount", void 0);
 __decorate([

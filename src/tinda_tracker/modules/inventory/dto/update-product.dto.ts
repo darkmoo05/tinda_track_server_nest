@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { ProductUnitConversionDto } from './product-unit-conversion.dto.js';
 
 export class UpdateProductDto {
 	@IsString()
@@ -20,7 +21,7 @@ export class UpdateProductDto {
 
 	@IsString()
 	@IsOptional()
-	unit?: string;
+	baseUnit?: string;
 
 	@Type(() => Number)
 	@IsNumber()
@@ -35,10 +36,10 @@ export class UpdateProductDto {
 	costPrice?: number;
 
 	@Type(() => Number)
-	@IsInt()
+	@IsNumber()
 	@Min(0)
 	@IsOptional()
-	stockQuantity?: number;
+	stockInBaseUnit?: number;
 
 	@Type(() => Number)
 	@IsInt()
@@ -69,4 +70,10 @@ export class UpdateProductDto {
 	@IsString()
 	@IsOptional()
 	expirationDate?: string;
+
+	@IsArray()
+	@ValidateNested({ each: true })
+	@Type(() => ProductUnitConversionDto)
+	@IsOptional()
+	unitConversions?: ProductUnitConversionDto[];
 }

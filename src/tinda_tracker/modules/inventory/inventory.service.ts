@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import { unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import type { Product, ProductCategory, ShelfLocation, StockMovement } from '@prisma/client';
+import type { Product, ProductCategory, ProductUnitConversion, ShelfLocation, StockMovement } from '@prisma/client';
 import { StockMovementType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import type { IStorageProvider } from '../../../core/storage/storage-provider.interface.js';
@@ -17,6 +17,8 @@ import { UpdateProductDto } from './dto/update-product.dto.js';
 /** Hard cap on the number of categories pinned to the dashboard chip row. */
 const MAX_QUICK_ACCESS_CATEGORIES = 10;
 
+type ProductWithConversions = Product & { unitConversions: ProductUnitConversion[] };
+
 @Injectable()
 export class InventoryService {
   constructor(
@@ -24,7 +26,7 @@ export class InventoryService {
     @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,
   ) {}
 
-  async create(dto: CreateProductDto): Promise<Product> {
+  async create(dto: CreateProductDto): Promise<ProductWithConversions> {
     // Check for a duplicate SKU before attempting any write. Return 409 so
     // the client can offer the user a "restock existing product" flow.
     const existing = await this.prisma.product.findUnique({
@@ -58,16 +60,29 @@ export class InventoryService {
       sku: dto.sku,
       description: dto.description ?? '',
       category: resolvedCategory,
-      unit: dto.unit ?? 'pcs',
+      baseUnit: dto.baseUnit ?? 'pcs',
       costPrice: dto.costPrice ?? 0,
       sellingPrice: dto.sellingPrice,
-      stockQuantity: dto.stockQuantity ?? 0,
+      stockInBaseUnit: dto.stockInBaseUnit ?? 0,
       reorderPoint: dto.reorderPoint ?? 0,
       isActive: dto.isActive ?? true,
       shelfLocation: resolvedShelfLocation,
       ...(categoryId ? { categoryId } : {}),
       ...(shelfLocationId ? { shelfLocationId } : {}),
       ...(dto.expirationDate ? { expirationDate: new Date(dto.expirationDate) } : {}),
+      ...(dto.unitConversions && dto.unitConversions.length > 0
+        ? {
+            unitConversions: {
+              create: dto.unitConversions.map((c) => ({
+                syncId: c.syncId ?? randomUUID(),
+                unitName: c.unitName,
+                conversionFactor: c.conversionFactor,
+                costPrice: c.costPrice,
+                sellingPrice: c.sellingPrice,
+              })),
+            },
+          }
+        : {}),
     };
     // Upsert by syncId so that retries from the same offline device never
     // cause a P2002 unique-constraint error. If the record was already
@@ -77,12 +92,16 @@ export class InventoryService {
         where:  { syncId: dto.syncId },
         create: { syncId: dto.syncId, ...fields },
         update: {},
+        include: { unitConversions: true },
       });
     }
-    return this.prisma.product.create({ data: fields });
+    return this.prisma.product.create({
+      data: fields,
+      include: { unitConversions: true },
+    });
   }
 
-  async list(query: ListProductsQueryDto): Promise<Product[]> {
+  async list(query: ListProductsQueryDto): Promise<ProductWithConversions[]> {
     return this.prisma.product.findMany({
       where: {
         isDeleted: query.includeDeleted ? undefined : false,
@@ -98,10 +117,11 @@ export class InventoryService {
       },
       orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
       take: query.limit ?? 50,
+      include: { unitConversions: true },
     });
   }
 
-  async update(productId: string, dto: UpdateProductDto): Promise<Product> {
+  async update(productId: string, dto: UpdateProductDto): Promise<ProductWithConversions> {
     await this.ensureProductExists(productId);
 
     // Resolve optional category / shelf-location relations by syncId.
@@ -125,10 +145,12 @@ export class InventoryService {
         ...(dto.sku !== undefined ? { sku: dto.sku } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(resolvedCategory !== undefined ? { category: resolvedCategory } : {}),
-        ...(dto.unit !== undefined ? { unit: dto.unit } : {}),
+        ...(dto.baseUnit !== undefined ? { baseUnit: dto.baseUnit } : {}),
         ...(dto.costPrice !== undefined ? { costPrice: dto.costPrice } : {}),
         ...(dto.sellingPrice !== undefined ? { sellingPrice: dto.sellingPrice } : {}),
-        ...(dto.stockQuantity !== undefined ? { stockQuantity: dto.stockQuantity } : {}),
+        ...(dto.stockInBaseUnit !== undefined
+          ? { stockInBaseUnit: dto.stockInBaseUnit }
+          : {}),
         ...(dto.reorderPoint !== undefined ? { reorderPoint: dto.reorderPoint } : {}),
         ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
         ...(dto.deviceId !== undefined ? { deviceId: dto.deviceId } : {}),
@@ -138,7 +160,22 @@ export class InventoryService {
         ...(dto.expirationDate !== undefined
           ? { expirationDate: dto.expirationDate ? new Date(dto.expirationDate) : null }
           : {}),
+        ...(dto.unitConversions
+          ? {
+              unitConversions: {
+                deleteMany: {},
+                create: dto.unitConversions.map((c) => ({
+                  syncId: c.syncId ?? randomUUID(),
+                  unitName: c.unitName,
+                  conversionFactor: c.conversionFactor,
+                  costPrice: c.costPrice,
+                  sellingPrice: c.sellingPrice,
+                })),
+              },
+            }
+          : {}),
       },
+      include: { unitConversions: true },
     });
   }
 
@@ -179,7 +216,7 @@ export class InventoryService {
         throw new NotFoundException('Product not found');
       }
 
-      const previousQuantity = product.stockQuantity;
+      const previousQuantity = product.stockInBaseUnit;
       const newQuantity = previousQuantity + dto.quantityDelta;
       if (newQuantity < 0) {
         throw new BadRequestException('Stock quantity cannot go below zero');
@@ -187,7 +224,7 @@ export class InventoryService {
 
       const updatedProduct = await client.product.update({
         where: { id: productId },
-        data: { stockQuantity: newQuantity },
+        data: { stockInBaseUnit: newQuantity },
       });
 
       const movement = await client.stockMovement.create({
