@@ -10,12 +10,13 @@ exports.CustomersModule = void 0;
 const common_1 = require("@nestjs/common");
 const customers_controller_js_1 = require("./customers.controller.js");
 const customers_service_js_1 = require("./customers.service.js");
+const utang_records_controller_js_1 = require("./utang-records.controller.js");
 let CustomersModule = class CustomersModule {
 };
 exports.CustomersModule = CustomersModule;
 exports.CustomersModule = CustomersModule = __decorate([
     (0, common_1.Module)({
-        controllers: [customers_controller_js_1.CustomersController],
+        controllers: [customers_controller_js_1.CustomersController, utang_records_controller_js_1.UtangRecordsController],
         providers: [customers_service_js_1.CustomersService],
     })
 ], CustomersModule);

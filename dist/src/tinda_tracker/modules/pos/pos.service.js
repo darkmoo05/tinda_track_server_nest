@@ -318,6 +318,73 @@ let PosService = class PosService {
     buildReference() {
         return `SALE-${(0, node_crypto_1.randomUUID)().slice(0, 8).toUpperCase()}`;
     }
+    async pushSales(records) {
+        let synced = 0;
+        for (const r of records) {
+            const existing = await this.prisma.sale.findUnique({
+                where: { syncId: r.syncId },
+            });
+            const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            if (existing && existing.updatedAt > incomingUpdatedAt)
+                continue;
+            const saleData = {
+                reference: r.reference,
+                deviceId: r.deviceId ?? null,
+                note: r.note ?? '',
+                subtotal: r.subtotal,
+                totalAmount: r.totalAmount,
+                paidAmount: r.paidAmount,
+                changeAmount: r.changeAmount ?? 0,
+                totalItems: r.totalItems,
+                isDeleted: r.isDeleted ?? false,
+            };
+            await this.prisma.$transaction(async (tx) => {
+                let saleId;
+                if (existing) {
+                    await tx.sale.update({ where: { id: existing.id }, data: saleData });
+                    saleId = existing.id;
+                    await tx.saleItem.deleteMany({ where: { saleId } });
+                }
+                else {
+                    const created = await tx.sale.create({
+                        data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...saleData },
+                    });
+                    saleId = created.id;
+                }
+                if (r.items.length > 0) {
+                    await tx.saleItem.createMany({
+                        data: r.items.map((i) => ({
+                            saleId,
+                            productId: i.productId,
+                            selectedUnit: i.selectedUnit,
+                            quantity: i.quantity,
+                            unitPrice: i.unitPrice,
+                            computedBaseQuantity: i.computedBaseQuantity,
+                            lineTotal: i.lineTotal,
+                            createdAt: i.createdAt ? new Date(i.createdAt) : new Date(),
+                        })),
+                    });
+                }
+            });
+            synced++;
+        }
+        return synced;
+    }
+    async pullSales(query) {
+        const sinceMs = Number(query.since ?? '0');
+        const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
+        const rows = await this.prisma.sale.findMany({
+            where: isIncremental
+                ? {
+                    updatedAt: { gt: new Date(sinceMs) },
+                    ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
+                }
+                : { isDeleted: false },
+            include: { saleItems: true },
+            orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
+        });
+        return rows.map(({ saleItems, ...sale }) => ({ ...sale, items: saleItems }));
+    }
 };
 exports.PosService = PosService;
 exports.PosService = PosService = __decorate([

@@ -10,12 +10,13 @@ exports.PosModule = void 0;
 const common_1 = require("@nestjs/common");
 const pos_controller_js_1 = require("./pos.controller.js");
 const pos_service_js_1 = require("./pos.service.js");
+const sales_sync_controller_js_1 = require("./sales-sync.controller.js");
 let PosModule = class PosModule {
 };
 exports.PosModule = PosModule;
 exports.PosModule = PosModule = __decorate([
     (0, common_1.Module)({
-        controllers: [pos_controller_js_1.PosController],
+        controllers: [pos_controller_js_1.PosController, sales_sync_controller_js_1.SalesSyncController],
         providers: [pos_service_js_1.PosService],
     })
 ], PosModule);

@@ -28,7 +28,7 @@ let CategoriesController = class CategoriesController {
         const data = await this.inventoryService.pushCategories(body);
         return { success: true, data };
     }
-    async pull(since) {
+    async pull(since, _deviceId) {
         const sinceMs = parseInt(since ?? '0', 10);
         const data = await this.inventoryService.pullCategories(sinceMs);
         return { success: true, data };
@@ -55,8 +55,9 @@ __decorate([
 __decorate([
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)('since')),
+    __param(1, (0, common_1.Query)('deviceId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], CategoriesController.prototype, "pull", null);
 __decorate([

@@ -13,6 +13,8 @@ exports.ShelfLocationRecordDto = void 0;
 const class_validator_1 = require("class-validator");
 class ShelfLocationRecordDto {
     syncId;
+    deviceId;
+    id;
     name;
     description;
     examples;
@@ -25,6 +27,16 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], ShelfLocationRecordDto.prototype, "syncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ShelfLocationRecordDto.prototype, "deviceId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ShelfLocationRecordDto.prototype, "id", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),

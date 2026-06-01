@@ -61,6 +61,9 @@ let PrismaService = PrismaService_1 = class PrismaService {
     get productCategory() {
         return this._client.productCategory;
     }
+    get productUnitConversion() {
+        return this._client.productUnitConversion;
+    }
     get shelfLocation() {
         return this._client.shelfLocation;
     }

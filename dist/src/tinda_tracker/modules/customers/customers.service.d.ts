@@ -2,6 +2,7 @@ import type { Customer, UtangRecord } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { CreateCustomerDto } from './dto/create-customer.dto.js';
 import { AddUtangDto, RecordPaymentDto } from './dto/utang.dto.js';
+import { PullCustomersQueryDto, PullUtangRecordsQueryDto, PushCustomerDto, PushUtangRecordDto } from './dto/sync.dto.js';
 export interface CustomerWithBalance extends Customer {
     balance: number;
     utangRecords: UtangRecord[];
@@ -16,4 +17,8 @@ export declare class CustomersService {
     recordPayment(customerId: string, dto: RecordPaymentDto): Promise<UtangRecord>;
     remove(id: string): Promise<Customer>;
     private ensureCustomerExists;
+    pushCustomers(records: PushCustomerDto[]): Promise<number>;
+    pullCustomers(query: PullCustomersQueryDto): Promise<Customer[]>;
+    pushUtangRecords(records: PushUtangRecordDto[]): Promise<number>;
+    pullUtangRecords(query: PullUtangRecordsQueryDto): Promise<UtangRecord[]>;
 }

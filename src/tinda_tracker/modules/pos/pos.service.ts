@@ -5,6 +5,7 @@ import { StockMovementType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { CheckoutPosDto } from './dto/checkout-pos.dto.js';
 import { ListSalesQueryDto } from './dto/list-sales-query.dto.js';
+import { PullSalesQueryDto, PushSaleDto } from './dto/push-sales.dto.js';
 
 @Injectable()
 export class PosService {
@@ -368,5 +369,88 @@ export class PosService {
 
   private buildReference(): string {
     return `SALE-${randomUUID().slice(0, 8).toUpperCase()}`;
+  }
+
+  // ─── Sale sync (push/pull) ────────────────────────────────────────────────
+
+  /**
+   * Bulk upsert sales (with embedded items) from the Flutter sync service.
+   * Items are replaced atomically — pushing a sale always rewrites its lines.
+   * LWW conflict resolution: server-side updatedAt wins if newer.
+   *
+   * NOTE: this is a pure data-replication path. It does NOT decrement stock,
+   * because the originating device has already done so locally. Server stock
+   * is the responsibility of the canonical /pos/checkout flow.
+   */
+  async pushSales(records: PushSaleDto[]): Promise<number> {
+    let synced = 0;
+    for (const r of records) {
+      const existing = await this.prisma.sale.findUnique({
+        where: { syncId: r.syncId },
+      });
+      const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      if (existing && existing.updatedAt > incomingUpdatedAt) continue;
+
+      const saleData = {
+        reference: r.reference,
+        deviceId: r.deviceId ?? null,
+        note: r.note ?? '',
+        subtotal: r.subtotal,
+        totalAmount: r.totalAmount,
+        paidAmount: r.paidAmount,
+        changeAmount: r.changeAmount ?? 0,
+        totalItems: r.totalItems,
+        isDeleted: r.isDeleted ?? false,
+      };
+
+      await this.prisma.$transaction(async (tx) => {
+        let saleId: string;
+        if (existing) {
+          await tx.sale.update({ where: { id: existing.id }, data: saleData });
+          saleId = existing.id;
+          // Replace items atomically.
+          await tx.saleItem.deleteMany({ where: { saleId } });
+        } else {
+          const created = await tx.sale.create({
+            data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...saleData },
+          });
+          saleId = created.id;
+        }
+        if (r.items.length > 0) {
+          await tx.saleItem.createMany({
+            data: r.items.map((i) => ({
+              saleId,
+              productId: i.productId,
+              selectedUnit: i.selectedUnit,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              computedBaseQuantity: i.computedBaseQuantity,
+              lineTotal: i.lineTotal,
+              createdAt: i.createdAt ? new Date(i.createdAt) : new Date(),
+            })),
+          });
+        }
+      });
+      synced++;
+    }
+    return synced;
+  }
+
+  async pullSales(query: PullSalesQueryDto) {
+    const sinceMs = Number(query.since ?? '0');
+    const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
+    const rows = await this.prisma.sale.findMany({
+      where: isIncremental
+        ? {
+            updatedAt: { gt: new Date(sinceMs) },
+            ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
+          }
+        : { isDeleted: false },
+      include: { saleItems: true },
+      orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
+    });
+    // Rename Prisma's `saleItems` to the `items` shape expected by the
+    // Flutter SaleRemoteRepository (which mirrors the push payload).
+    return rows.map(({ saleItems, ...sale }) => ({ ...sale, items: saleItems }));
   }
 }

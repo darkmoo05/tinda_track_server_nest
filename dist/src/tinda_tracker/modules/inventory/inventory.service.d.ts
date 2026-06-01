@@ -7,6 +7,8 @@ import { CreateProductDto } from './dto/create-product.dto.js';
 import { ListProductsQueryDto } from './dto/list-products-query.dto.js';
 import { ShelfLocationRecordDto } from './dto/push-shelf-locations.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
+import { PullProductsQueryDto, PushProductDto } from './dto/push-products.dto.js';
+import { PullProductUnitConversionsQueryDto, PushProductUnitConversionDto } from './dto/push-product-unit-conversions.dto.js';
 type ProductWithConversions = Product & {
     unitConversions: ProductUnitConversion[];
 };
@@ -35,5 +37,9 @@ export declare class InventoryService {
     listShelfLocations(): Promise<ShelfLocation[]>;
     deleteShelfLocation(id: string): Promise<ShelfLocation>;
     updateShelfLocationImage(id: string, file: Express.Multer.File): Promise<ShelfLocation>;
+    pushProducts(records: PushProductDto[]): Promise<number>;
+    pullProducts(query: PullProductsQueryDto): Promise<Product[]>;
+    pushProductUnitConversions(records: PushProductUnitConversionDto[]): Promise<number>;
+    pullProductUnitConversions(query: PullProductUnitConversionsQueryDto): Promise<ProductUnitConversion[]>;
 }
 export {};

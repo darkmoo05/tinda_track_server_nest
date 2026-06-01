@@ -303,6 +303,7 @@ model ProductUnitConversion {
 
 model Sale {
   id             String     @id @default(uuid())
+  syncId         String     @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   reference      String     @unique
   deviceId       String?
   note           String     @default("")
@@ -311,6 +312,7 @@ model Sale {
   paidAmount     Float
   changeAmount   Float      @default(0)
   totalItems     Int
+  isDeleted      Boolean    @default(false)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   saleItems      SaleItem[]
@@ -338,6 +340,8 @@ model SaleItem {
 
 model Customer {
   id          String        @id @default(uuid())
+  syncId      String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deviceId    String?
   name        String
   phone       String        @default("")
   address     String        @default("")
@@ -352,11 +356,14 @@ model Customer {
 
 model UtangRecord {
   id          String    @id @default(uuid())
+  syncId      String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deviceId    String?
   customerId  String
   description String    @default("")
   amount      Float
   isDeleted   Boolean   @default(false)
   createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
   customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])

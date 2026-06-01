@@ -11,7 +11,7 @@ export declare class CategoriesController {
         success: boolean;
         data: unknown[];
     }>;
-    pull(since: string): Promise<{
+    pull(since: string, _deviceId?: string): Promise<{
         success: boolean;
         data: unknown[];
     }>;

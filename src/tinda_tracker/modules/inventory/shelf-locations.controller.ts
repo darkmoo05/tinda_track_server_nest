@@ -45,6 +45,7 @@ export class ShelfLocationsController {
   @Get('pull')
   async pull(
     @Query('since') since: string,
+    @Query('deviceId') _deviceId?: string,
   ): Promise<{ success: boolean; data: unknown[] }> {
     const sinceMs = parseInt(since ?? '0', 10);
     const data = await this.inventoryService.pullShelfLocations(sinceMs);

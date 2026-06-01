@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const customers_service_js_1 = require("./customers.service.js");
 const create_customer_dto_js_1 = require("./dto/create-customer.dto.js");
 const utang_dto_js_1 = require("./dto/utang.dto.js");
+const sync_dto_js_1 = require("./dto/sync.dto.js");
 let CustomersController = class CustomersController {
     customersService;
     constructor(customersService) {
@@ -24,6 +25,14 @@ let CustomersController = class CustomersController {
     }
     async list() {
         const data = await this.customersService.list();
+        return { success: true, data };
+    }
+    async push(body) {
+        const synced = await this.customersService.pushCustomers(body);
+        return { success: true, synced };
+    }
+    async pull(query) {
+        const data = await this.customersService.pullCustomers(query);
         return { success: true, data };
     }
     async findOne(id) {
@@ -54,6 +63,20 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "list", null);
+__decorate([
+    (0, common_1.Post)('push'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", Promise)
+], CustomersController.prototype, "push", null);
+__decorate([
+    (0, common_1.Get)('pull'),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [sync_dto_js_1.PullCustomersQueryDto]),
+    __metadata("design:returntype", Promise)
+], CustomersController.prototype, "pull", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

@@ -1,10 +1,19 @@
 import { CustomersService } from './customers.service.js';
 import { CreateCustomerDto } from './dto/create-customer.dto.js';
 import { AddUtangDto, RecordPaymentDto } from './dto/utang.dto.js';
+import { PullCustomersQueryDto, PushCustomerDto } from './dto/sync.dto.js';
 export declare class CustomersController {
     private readonly customersService;
     constructor(customersService: CustomersService);
     list(): Promise<{
+        success: boolean;
+        data: unknown[];
+    }>;
+    push(body: PushCustomerDto[]): Promise<{
+        success: boolean;
+        synced: number;
+    }>;
+    pull(query: PullCustomersQueryDto): Promise<{
         success: boolean;
         data: unknown[];
     }>;

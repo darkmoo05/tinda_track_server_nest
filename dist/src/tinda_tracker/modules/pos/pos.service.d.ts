@@ -2,6 +2,7 @@ import type { Sale } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { CheckoutPosDto } from './dto/checkout-pos.dto.js';
 import { ListSalesQueryDto } from './dto/list-sales-query.dto.js';
+import { PullSalesQueryDto, PushSaleDto } from './dto/push-sales.dto.js';
 export declare class PosService {
     private readonly prisma;
     constructor(prisma: PrismaService);
@@ -44,6 +45,8 @@ export declare class PosService {
         })[];
     } & {
         id: string;
+        syncId: string;
+        isDeleted: boolean;
         createdAt: Date;
         updatedAt: Date;
         deviceId: string | null;
@@ -96,4 +99,31 @@ export declare class PosService {
         }[];
     }>;
     private buildReference;
+    pushSales(records: PushSaleDto[]): Promise<number>;
+    pullSales(query: PullSalesQueryDto): Promise<{
+        items: {
+            id: string;
+            createdAt: Date;
+            productId: string;
+            quantity: number;
+            selectedUnit: string;
+            unitPrice: import("@prisma/client-runtime-utils").Decimal;
+            computedBaseQuantity: number;
+            saleId: string;
+            lineTotal: number;
+        }[];
+        id: string;
+        syncId: string;
+        isDeleted: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deviceId: string | null;
+        note: string;
+        reference: string;
+        totalAmount: number;
+        paidAmount: number;
+        subtotal: number;
+        changeAmount: number;
+        totalItems: number;
+    }[]>;
 }

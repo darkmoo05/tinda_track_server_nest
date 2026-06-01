@@ -20,6 +20,10 @@ import { AdjustStockDto } from './dto/adjust-stock.dto.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { ListProductsQueryDto } from './dto/list-products-query.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
+import {
+  PullProductsQueryDto,
+  PushProductDto,
+} from './dto/push-products.dto.js';
 
 const UPLOAD_DIR = './uploads/products';
 // Ensure the upload directory exists at module load time.
@@ -38,6 +42,24 @@ export class InventoryController {
   @Get()
   async list(@Query() query: ListProductsQueryDto): Promise<{ success: boolean; data: unknown[] }> {
     const data = await this.inventoryService.list(query);
+    return { success: true, data };
+  }
+
+  /** Bulk upsert from the Flutter sync service. */
+  @Post('push')
+  async push(
+    @Body() body: PushProductDto[],
+  ): Promise<{ success: boolean; synced: number }> {
+    const synced = await this.inventoryService.pushProducts(body);
+    return { success: true, synced };
+  }
+
+  /** Pull — returns all products updated since [since] ms; excludes own deviceId. */
+  @Get('pull')
+  async pull(
+    @Query() query: PullProductsQueryDto,
+  ): Promise<{ success: boolean; data: unknown[] }> {
+    const data = await this.inventoryService.pullProducts(query);
     return { success: true, data };
   }
 

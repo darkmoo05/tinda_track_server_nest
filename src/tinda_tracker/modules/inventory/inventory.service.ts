@@ -13,6 +13,14 @@ import { CreateProductDto } from './dto/create-product.dto.js';
 import { ListProductsQueryDto } from './dto/list-products-query.dto.js';
 import { ShelfLocationRecordDto } from './dto/push-shelf-locations.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
+import {
+  PullProductsQueryDto,
+  PushProductDto,
+} from './dto/push-products.dto.js';
+import {
+  PullProductUnitConversionsQueryDto,
+  PushProductUnitConversionDto,
+} from './dto/push-product-unit-conversions.dto.js';
 
 /** Hard cap on the number of categories pinned to the dashboard chip row. */
 const MAX_QUICK_ACCESS_CATEGORIES = 10;
@@ -307,7 +315,7 @@ export class InventoryService {
         });
       } else {
         item = await this.prisma.productCategory.create({
-          data: { syncId: r.syncId, ...data },
+          data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
         });
       }
       results.push(item);
@@ -348,18 +356,23 @@ export class InventoryService {
    */
   private async assertQuickAccessCapAfterPush(records: CategoryRecordDto[]): Promise<void> {
     const incomingSyncIds = records.map((r) => r.syncId);
+    const incomingNames = records.map((r) => r.name);
     const incomingPinnedSyncIds = new Set(
       records
         .filter((r) => r.isQuickAccess === true && r.isDeleted !== true)
         .map((r) => r.syncId),
     );
-    // Anything the payload already references is overridden by its new flag,
-    // so we only need to count the remaining unaffected rows on disk.
+    // Anything the payload already references — *by syncId or by name* — is
+    // overridden by its new flag, so we only count the remaining unaffected
+    // rows on disk. The name exclusion mirrors the writer's name-fallback
+    // dedup; without it, a client that pins "Snacks" with a freshly-generated
+    // syncId is double-counted against the same-named seed row.
     const otherPinned = await this.prisma.productCategory.count({
       where: {
         isQuickAccess: true,
         isDeleted: false,
         syncId: { notIn: incomingSyncIds },
+        name: { notIn: incomingNames },
       },
     });
     const total = otherPinned + incomingPinnedSyncIds.size;
@@ -399,7 +412,7 @@ export class InventoryService {
         });
       } else {
         item = await this.prisma.shelfLocation.create({
-          data: { syncId: r.syncId, ...data },
+          data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
         });
       }
       results.push(item);
@@ -457,5 +470,127 @@ export class InventoryService {
     }
     return updated;
   }
+
+  // ─── Product sync (push/pull) ─────────────────────────────────────────────
+
+  /**
+   * Bulk upsert products from the Flutter sync service. Uses syncId as the
+   * stable cross-device identity; updatedAt-based LWW is enforced — if the
+   * server's row is newer the push is silently ignored to avoid stomping
+   * concurrent edits.
+   */
+  async pushProducts(records: PushProductDto[]): Promise<number> {
+    let synced = 0;
+    for (const r of records) {
+      // Dual-lookup: try by syncId first, then fall back to the UNIQUE
+      // sku — handles the case where the device's syncId differs from a
+      // pre-existing server row that was created with the same sku (e.g.
+      // seed data, or two devices that registered the same product offline).
+      let existing = await this.prisma.product.findUnique({
+        where: { syncId: r.syncId },
+      });
+      existing ??= await this.prisma.product.findUnique({
+        where: { sku: r.sku },
+      });
+      const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      if (existing && existing.updatedAt > incomingUpdatedAt) {
+        // Server row is newer — LWW conflict resolution drops the inbound write.
+        continue;
+      }
+      const data = {
+        deviceId: r.deviceId ?? null,
+        name: r.name,
+        sku: r.sku,
+        description: r.description ?? '',
+        category: r.category ?? 'General',
+        baseUnit: r.baseUnit ?? 'pcs',
+        costPrice: r.costPrice ?? 0,
+        sellingPrice: r.sellingPrice,
+        stockInBaseUnit: r.stockInBaseUnit ?? 0,
+        reorderPoint: r.reorderPoint ?? 0,
+        isActive: r.isActive ?? true,
+        isDeleted: r.isDeleted ?? false,
+        imageUrl: r.imageUrl ?? null,
+        shelfLocation: r.shelfLocation ?? 'Counter',
+        expirationDate: r.expirationDate ? new Date(r.expirationDate) : null,
+        categoryId: r.categoryId ?? null,
+        shelfLocationId: r.shelfLocationId ?? null,
+      };
+      if (existing) {
+        await this.prisma.product.update({
+          where: { id: existing.id },
+          // Claim the row for the incoming syncId so future pushes hit the
+          // fast path. Safe because syncId is also @unique.
+          data: { ...data, syncId: r.syncId },
+        });
+      } else {
+        await this.prisma.product.create({
+          data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
+        });
+      }
+      synced++;
+    }
+    return synced;
+  }
+
+  async pullProducts(query: PullProductsQueryDto): Promise<Product[]> {
+    const sinceMs = Number(query.since ?? '0');
+    const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
+    return this.prisma.product.findMany({
+      where: isIncremental
+        ? {
+            updatedAt: { gt: new Date(sinceMs) },
+            ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
+          }
+        : { isDeleted: false },
+      orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
+    });
+  }
+
+  // ─── Product unit conversion sync (push/pull) ─────────────────────────────
+
+  async pushProductUnitConversions(
+    records: PushProductUnitConversionDto[],
+  ): Promise<number> {
+    let synced = 0;
+    for (const r of records) {
+      const existing = await this.prisma.productUnitConversion.findUnique({
+        where: { syncId: r.syncId },
+      });
+      const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      if (existing && existing.updatedAt > incomingUpdatedAt) continue;
+      const data = {
+        productId: r.productId,
+        unitName: r.unitName,
+        conversionFactor: r.conversionFactor,
+        costPrice: r.costPrice,
+        sellingPrice: r.sellingPrice,
+      };
+      if (existing) {
+        await this.prisma.productUnitConversion.update({
+          where: { id: existing.id },
+          data,
+        });
+      } else {
+        await this.prisma.productUnitConversion.create({
+          data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
+        });
+      }
+      synced++;
+    }
+    return synced;
+  }
+
+  async pullProductUnitConversions(
+    query: PullProductUnitConversionsQueryDto,
+  ): Promise<ProductUnitConversion[]> {
+    const sinceMs = Number(query.since ?? '0');
+    const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
+    return this.prisma.productUnitConversion.findMany({
+      where: isIncremental ? { updatedAt: { gt: new Date(sinceMs) } } : {},
+      orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
+    });
+  }
 }
+
 

@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { CustomersService } from './customers.service.js';
 import { CreateCustomerDto } from './dto/create-customer.dto.js';
 import { AddUtangDto, RecordPaymentDto } from './dto/utang.dto.js';
+import { PullCustomersQueryDto, PushCustomerDto } from './dto/sync.dto.js';
 
 @Controller('customers')
 export class CustomersController {
@@ -10,6 +11,24 @@ export class CustomersController {
   @Get()
   async list(): Promise<{ success: boolean; data: unknown[] }> {
     const data = await this.customersService.list();
+    return { success: true, data };
+  }
+
+  /** Bulk upsert from the Flutter sync service. */
+  @Post('push')
+  async push(
+    @Body() body: PushCustomerDto[],
+  ): Promise<{ success: boolean; synced: number }> {
+    const synced = await this.customersService.pushCustomers(body);
+    return { success: true, synced };
+  }
+
+  /** Pull — returns all customers updated since [since] ms; excludes own deviceId. */
+  @Get('pull')
+  async pull(
+    @Query() query: PullCustomersQueryDto,
+  ): Promise<{ success: boolean; data: unknown[] }> {
+    const data = await this.customersService.pullCustomers(query);
     return { success: true, data };
   }
 

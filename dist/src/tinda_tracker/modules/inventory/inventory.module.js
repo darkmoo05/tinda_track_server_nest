@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const categories_controller_js_1 = require("./categories.controller.js");
 const inventory_controller_js_1 = require("./inventory.controller.js");
 const inventory_service_js_1 = require("./inventory.service.js");
+const product_unit_conversions_controller_js_1 = require("./product-unit-conversions.controller.js");
 const shelf_locations_controller_js_1 = require("./shelf-locations.controller.js");
 const local_storage_provider_js_1 = require("../../../core/storage/local-storage.provider.js");
 const storage_provider_interface_js_1 = require("../../../core/storage/storage-provider.interface.js");
@@ -19,7 +20,12 @@ let InventoryModule = class InventoryModule {
 exports.InventoryModule = InventoryModule;
 exports.InventoryModule = InventoryModule = __decorate([
     (0, common_1.Module)({
-        controllers: [inventory_controller_js_1.InventoryController, categories_controller_js_1.CategoriesController, shelf_locations_controller_js_1.ShelfLocationsController],
+        controllers: [
+            inventory_controller_js_1.InventoryController,
+            categories_controller_js_1.CategoriesController,
+            shelf_locations_controller_js_1.ShelfLocationsController,
+            product_unit_conversions_controller_js_1.ProductUnitConversionsController,
+        ],
         providers: [
             inventory_service_js_1.InventoryService,
             { provide: storage_provider_interface_js_1.STORAGE_PROVIDER, useClass: local_storage_provider_js_1.LocalStorageProvider },

@@ -3,6 +3,7 @@ import { AdjustStockDto } from './dto/adjust-stock.dto.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { ListProductsQueryDto } from './dto/list-products-query.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
+import { PullProductsQueryDto, PushProductDto } from './dto/push-products.dto.js';
 export declare class InventoryController {
     private readonly inventoryService;
     constructor(inventoryService: InventoryService);
@@ -11,6 +12,14 @@ export declare class InventoryController {
         data: unknown;
     }>;
     list(query: ListProductsQueryDto): Promise<{
+        success: boolean;
+        data: unknown[];
+    }>;
+    push(body: PushProductDto[]): Promise<{
+        success: boolean;
+        synced: number;
+    }>;
+    pull(query: PullProductsQueryDto): Promise<{
         success: boolean;
         data: unknown[];
     }>;

@@ -23,6 +23,7 @@ const adjust_stock_dto_js_1 = require("./dto/adjust-stock.dto.js");
 const create_product_dto_js_1 = require("./dto/create-product.dto.js");
 const list_products_query_dto_js_1 = require("./dto/list-products-query.dto.js");
 const update_product_dto_js_1 = require("./dto/update-product.dto.js");
+const push_products_dto_js_1 = require("./dto/push-products.dto.js");
 const UPLOAD_DIR = './uploads/products';
 (0, node_fs_1.mkdirSync)(UPLOAD_DIR, { recursive: true });
 let InventoryController = class InventoryController {
@@ -36,6 +37,14 @@ let InventoryController = class InventoryController {
     }
     async list(query) {
         const data = await this.inventoryService.list(query);
+        return { success: true, data };
+    }
+    async push(body) {
+        const synced = await this.inventoryService.pushProducts(body);
+        return { success: true, synced };
+    }
+    async pull(query) {
+        const data = await this.inventoryService.pullProducts(query);
         return { success: true, data };
     }
     async update(id, body) {
@@ -76,6 +85,20 @@ __decorate([
     __metadata("design:paramtypes", [list_products_query_dto_js_1.ListProductsQueryDto]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "list", null);
+__decorate([
+    (0, common_1.Post)('push'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", Promise)
+], InventoryController.prototype, "push", null);
+__decorate([
+    (0, common_1.Get)('pull'),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [push_products_dto_js_1.PullProductsQueryDto]),
+    __metadata("design:returntype", Promise)
+], InventoryController.prototype, "pull", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),

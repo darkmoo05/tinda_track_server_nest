@@ -275,7 +275,7 @@ let InventoryService = class InventoryService {
             }
             else {
                 item = await this.prisma.productCategory.create({
-                    data: { syncId: r.syncId, ...data },
+                    data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
                 });
             }
             results.push(item);
@@ -306,6 +306,7 @@ let InventoryService = class InventoryService {
     }
     async assertQuickAccessCapAfterPush(records) {
         const incomingSyncIds = records.map((r) => r.syncId);
+        const incomingNames = records.map((r) => r.name);
         const incomingPinnedSyncIds = new Set(records
             .filter((r) => r.isQuickAccess === true && r.isDeleted !== true)
             .map((r) => r.syncId));
@@ -314,6 +315,7 @@ let InventoryService = class InventoryService {
                 isQuickAccess: true,
                 isDeleted: false,
                 syncId: { notIn: incomingSyncIds },
+                name: { notIn: incomingNames },
             },
         });
         const total = otherPinned + incomingPinnedSyncIds.size;
@@ -349,7 +351,7 @@ let InventoryService = class InventoryService {
             }
             else {
                 item = await this.prisma.shelfLocation.create({
-                    data: { syncId: r.syncId, ...data },
+                    data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
                 });
             }
             results.push(item);
@@ -395,6 +397,105 @@ let InventoryService = class InventoryService {
             }
         }
         return updated;
+    }
+    async pushProducts(records) {
+        let synced = 0;
+        for (const r of records) {
+            let existing = await this.prisma.product.findUnique({
+                where: { syncId: r.syncId },
+            });
+            existing ??= await this.prisma.product.findUnique({
+                where: { sku: r.sku },
+            });
+            const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            if (existing && existing.updatedAt > incomingUpdatedAt) {
+                continue;
+            }
+            const data = {
+                deviceId: r.deviceId ?? null,
+                name: r.name,
+                sku: r.sku,
+                description: r.description ?? '',
+                category: r.category ?? 'General',
+                baseUnit: r.baseUnit ?? 'pcs',
+                costPrice: r.costPrice ?? 0,
+                sellingPrice: r.sellingPrice,
+                stockInBaseUnit: r.stockInBaseUnit ?? 0,
+                reorderPoint: r.reorderPoint ?? 0,
+                isActive: r.isActive ?? true,
+                isDeleted: r.isDeleted ?? false,
+                imageUrl: r.imageUrl ?? null,
+                shelfLocation: r.shelfLocation ?? 'Counter',
+                expirationDate: r.expirationDate ? new Date(r.expirationDate) : null,
+                categoryId: r.categoryId ?? null,
+                shelfLocationId: r.shelfLocationId ?? null,
+            };
+            if (existing) {
+                await this.prisma.product.update({
+                    where: { id: existing.id },
+                    data: { ...data, syncId: r.syncId },
+                });
+            }
+            else {
+                await this.prisma.product.create({
+                    data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
+                });
+            }
+            synced++;
+        }
+        return synced;
+    }
+    async pullProducts(query) {
+        const sinceMs = Number(query.since ?? '0');
+        const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
+        return this.prisma.product.findMany({
+            where: isIncremental
+                ? {
+                    updatedAt: { gt: new Date(sinceMs) },
+                    ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
+                }
+                : { isDeleted: false },
+            orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
+        });
+    }
+    async pushProductUnitConversions(records) {
+        let synced = 0;
+        for (const r of records) {
+            const existing = await this.prisma.productUnitConversion.findUnique({
+                where: { syncId: r.syncId },
+            });
+            const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            if (existing && existing.updatedAt > incomingUpdatedAt)
+                continue;
+            const data = {
+                productId: r.productId,
+                unitName: r.unitName,
+                conversionFactor: r.conversionFactor,
+                costPrice: r.costPrice,
+                sellingPrice: r.sellingPrice,
+            };
+            if (existing) {
+                await this.prisma.productUnitConversion.update({
+                    where: { id: existing.id },
+                    data,
+                });
+            }
+            else {
+                await this.prisma.productUnitConversion.create({
+                    data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
+                });
+            }
+            synced++;
+        }
+        return synced;
+    }
+    async pullProductUnitConversions(query) {
+        const sinceMs = Number(query.since ?? '0');
+        const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
+        return this.prisma.productUnitConversion.findMany({
+            where: isIncremental ? { updatedAt: { gt: new Date(sinceMs) } } : {},
+            orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
+        });
     }
 };
 exports.InventoryService = InventoryService;

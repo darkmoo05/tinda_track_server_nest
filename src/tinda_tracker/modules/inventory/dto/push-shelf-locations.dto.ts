@@ -5,6 +5,17 @@ export class ShelfLocationRecordDto {
   @IsNotEmpty()
   syncId!: string;
 
+  /** Originating device for LWW/back-fan filtering. Accepted but currently not persisted. */
+  @IsString()
+  @IsOptional()
+  deviceId?: string;
+
+  /** Client-generated UUID — adopted by the server on first create so that
+   *  subsequent pulls return the same id the device already stored locally. */
+  @IsString()
+  @IsOptional()
+  id?: string;
+
   @IsString()
   @IsNotEmpty()
   name!: string;
