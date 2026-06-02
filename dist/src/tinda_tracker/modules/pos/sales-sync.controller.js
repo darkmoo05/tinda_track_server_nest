@@ -16,6 +16,7 @@ exports.SalesSyncController = void 0;
 const common_1 = require("@nestjs/common");
 const pos_service_js_1 = require("./pos.service.js");
 const push_sales_dto_js_1 = require("./dto/push-sales.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let SalesSyncController = class SalesSyncController {
     posService;
     constructor(posService) {
@@ -32,6 +33,7 @@ let SalesSyncController = class SalesSyncController {
 };
 exports.SalesSyncController = SalesSyncController;
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -39,6 +41,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SalesSyncController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),

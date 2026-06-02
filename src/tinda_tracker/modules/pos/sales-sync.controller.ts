@@ -1,12 +1,14 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { PosService } from './pos.service.js';
 import { PullSalesQueryDto, PushSaleDto } from './dto/push-sales.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 @Controller('sales')
 export class SalesSyncController {
   constructor(private readonly posService: PosService) {}
 
   /** Bulk upsert sales (with embedded items) from the Flutter sync service. */
+  @Public()
   @Post('push')
   async push(
     @Body() body: PushSaleDto[],
@@ -16,6 +18,7 @@ export class SalesSyncController {
   }
 
   /** Pull — returns sales (with embedded items) updated since [since] ms. */
+  @Public()
   @Get('pull')
   async pull(
     @Query() query: PullSalesQueryDto,

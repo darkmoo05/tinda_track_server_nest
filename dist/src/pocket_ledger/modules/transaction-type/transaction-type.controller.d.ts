@@ -1,4 +1,4 @@
-import { TransactionTypeService } from './transaction-type.service';
+import { TransactionTypeService } from './transaction-type.service.js';
 import { TransactionTypeItemDto } from './dto/transaction-type-item.dto.js';
 import { PullTransactionTypesQueryDto } from './dto/pull-transaction-types-query.dto.js';
 export declare class TransactionTypeController {

@@ -1,6 +1,6 @@
-import { FeeTransactionService } from './fee-transaction.service';
-import { FeeTransactionItemDto } from './dto/fee-transaction-item.dto';
-import { PullFeeTransactionsQueryDto } from './dto/pull-fee-transactions-query.dto';
+import { FeeTransactionService } from './fee-transaction.service.js';
+import { FeeTransactionItemDto } from './dto/fee-transaction-item.dto.js';
+import { PullFeeTransactionsQueryDto } from './dto/pull-fee-transactions-query.dto.js';
 export declare class FeeTransactionController {
     private readonly feeTransactionService;
     constructor(feeTransactionService: FeeTransactionService);

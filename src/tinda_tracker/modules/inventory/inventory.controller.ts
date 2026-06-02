@@ -24,6 +24,7 @@ import {
   PullProductsQueryDto,
   PushProductDto,
 } from './dto/push-products.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 const UPLOAD_DIR = './uploads/products';
 // Ensure the upload directory exists at module load time.
@@ -46,6 +47,7 @@ export class InventoryController {
   }
 
   /** Bulk upsert from the Flutter sync service. */
+  @Public()
   @Post('push')
   async push(
     @Body() body: PushProductDto[],
@@ -55,6 +57,7 @@ export class InventoryController {
   }
 
   /** Pull — returns all products updated since [since] ms; excludes own deviceId. */
+  @Public()
   @Get('pull')
   async pull(
     @Query() query: PullProductsQueryDto,

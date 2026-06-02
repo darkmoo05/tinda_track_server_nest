@@ -14,9 +14,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PartyController = void 0;
 const common_1 = require("@nestjs/common");
-const party_service_1 = require("./party.service");
+const party_service_js_1 = require("./party.service.js");
 const party_item_dto_js_1 = require("./dto/party-item.dto.js");
 const pull_parties_query_dto_js_1 = require("./dto/pull-parties-query.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let PartyController = class PartyController {
     partyService;
     constructor(partyService) {
@@ -33,6 +34,7 @@ let PartyController = class PartyController {
 };
 exports.PartyController = PartyController;
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: party_item_dto_js_1.PartyItemDto, whitelist: true }))),
@@ -41,6 +43,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], PartyController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
@@ -50,6 +53,6 @@ __decorate([
 exports.PartyController = PartyController = __decorate([
     (0, common_1.Controller)('parties'),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true, whitelist: true })),
-    __metadata("design:paramtypes", [party_service_1.PartyService])
+    __metadata("design:paramtypes", [party_service_js_1.PartyService])
 ], PartyController);
 //# sourceMappingURL=party.controller.js.map

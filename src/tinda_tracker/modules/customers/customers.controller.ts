@@ -3,6 +3,7 @@ import { CustomersService } from './customers.service.js';
 import { CreateCustomerDto } from './dto/create-customer.dto.js';
 import { AddUtangDto, RecordPaymentDto } from './dto/utang.dto.js';
 import { PullCustomersQueryDto, PushCustomerDto } from './dto/sync.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 @Controller('customers')
 export class CustomersController {
@@ -15,6 +16,7 @@ export class CustomersController {
   }
 
   /** Bulk upsert from the Flutter sync service. */
+  @Public()
   @Post('push')
   async push(
     @Body() body: PushCustomerDto[],
@@ -24,6 +26,7 @@ export class CustomersController {
   }
 
   /** Pull — returns all customers updated since [since] ms; excludes own deviceId. */
+  @Public()
   @Get('pull')
   async pull(
     @Query() query: PullCustomersQueryDto,

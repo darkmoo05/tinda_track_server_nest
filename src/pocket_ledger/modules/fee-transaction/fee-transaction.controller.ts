@@ -10,9 +10,10 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { FeeTransactionService } from './fee-transaction.service';
-import { FeeTransactionItemDto } from './dto/fee-transaction-item.dto';
-import { PullFeeTransactionsQueryDto } from './dto/pull-fee-transactions-query.dto';
+import { FeeTransactionService } from './fee-transaction.service.js';
+import { FeeTransactionItemDto } from './dto/fee-transaction-item.dto.js';
+import { PullFeeTransactionsQueryDto } from './dto/pull-fee-transactions-query.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 /**
  * FeeTransactionController exposes the sync endpoints for fee records:
@@ -29,6 +30,7 @@ export class FeeTransactionController {
    *
    * Accepts an array of fee transaction objects. Returns { success, synced }.
    */
+  @Public()
   @Post('push')
   @HttpCode(HttpStatus.OK)
   async push(
@@ -46,6 +48,7 @@ export class FeeTransactionController {
    *
    * Returns fee transactions updated after `since` from other devices.
    */
+  @Public()
   @Get('pull')
   async pull(
     @Query() query: PullFeeTransactionsQueryDto,

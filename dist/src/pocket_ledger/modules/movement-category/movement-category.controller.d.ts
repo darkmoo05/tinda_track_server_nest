@@ -1,4 +1,4 @@
-import { MovementCategoryService } from './movement-category.service';
+import { MovementCategoryService } from './movement-category.service.js';
 import { MovementCategoryItemDto } from './dto/movement-category-item.dto.js';
 import { PullMovementCategoriesQueryDto } from './dto/pull-movement-categories-query.dto.js';
 export declare class MovementCategoryController {

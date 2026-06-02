@@ -1,4 +1,4 @@
-import { PartyService } from './party.service';
+import { PartyService } from './party.service.js';
 import { PartyItemDto } from './dto/party-item.dto.js';
 import { PullPartiesQueryDto } from './dto/pull-parties-query.dto.js';
 export declare class PartyController {

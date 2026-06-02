@@ -14,9 +14,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LedgerEntryController = void 0;
 const common_1 = require("@nestjs/common");
-const ledger_entry_service_1 = require("./ledger-entry.service");
+const ledger_entry_service_js_1 = require("./ledger-entry.service.js");
 const ledger_entry_item_dto_js_1 = require("./dto/ledger-entry-item.dto.js");
 const pull_ledger_entries_query_dto_js_1 = require("./dto/pull-ledger-entries-query.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let LedgerEntryController = class LedgerEntryController {
     ledgerEntryService;
     constructor(ledgerEntryService) {
@@ -33,6 +34,7 @@ let LedgerEntryController = class LedgerEntryController {
 };
 exports.LedgerEntryController = LedgerEntryController;
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: ledger_entry_item_dto_js_1.LedgerEntryItemDto, whitelist: true }))),
@@ -41,6 +43,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], LedgerEntryController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
@@ -50,6 +53,6 @@ __decorate([
 exports.LedgerEntryController = LedgerEntryController = __decorate([
     (0, common_1.Controller)('entries'),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true, whitelist: true })),
-    __metadata("design:paramtypes", [ledger_entry_service_1.LedgerEntryService])
+    __metadata("design:paramtypes", [ledger_entry_service_js_1.LedgerEntryService])
 ], LedgerEntryController);
 //# sourceMappingURL=ledger-entry.controller.js.map

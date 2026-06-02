@@ -57,6 +57,8 @@ model Charge {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("charges")
 }
 
@@ -74,6 +76,8 @@ model Party {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("parties")
 }
 
@@ -88,6 +92,8 @@ model TransactionType {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("transaction_types")
 }
 
@@ -100,6 +106,8 @@ model MovementCategory {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("movement_categories")
 }
 
@@ -121,6 +129,8 @@ model FeeTransaction {
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("fee_transactions")
 }
 
@@ -152,6 +162,8 @@ model LedgerEntry {
   updatedAt         DateTime @updatedAt
   transaction       Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("ledger_entries")
 }
 
@@ -187,6 +199,8 @@ model Transaction {
   updatedAt          DateTime             @updatedAt
   ledgerEntries      LedgerEntry[]
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("transactions")
 }
 
@@ -208,6 +222,7 @@ model ProductCategory {
   updatedAt     DateTime  @updatedAt
   products      Product[]
 
+  @@index([updatedAt])
   @@map("product_categories")
 }
 
@@ -230,6 +245,7 @@ model ShelfLocation {
   updatedAt   DateTime  @updatedAt
   products    Product[]
 
+  @@index([updatedAt])
   @@map("shelf_locations")
 }
 
@@ -265,6 +281,8 @@ model Product {
   saleItems         SaleItem[]
   stockMovements    StockMovement[]
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("products")
 }
 
@@ -317,6 +335,8 @@ model Sale {
   updatedAt      DateTime   @updatedAt
   saleItems      SaleItem[]
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("sales")
 }
 
@@ -351,6 +371,8 @@ model Customer {
   updatedAt   DateTime      @updatedAt
   utangRecords UtangRecord[]
 
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("customers")
 }
 
@@ -367,5 +389,23 @@ model UtangRecord {
   customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])
+  @@index([updatedAt])
+  @@index([deviceId])
   @@map("utang_records")
+}
+
+enum Role {
+  OWNER
+  STAFF
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      Role     @default(OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
 }

@@ -10,9 +10,10 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ChargeService } from './charge.service';
-import { ChargeItemDto } from './dto/push-charges.dto';
-import { PullChargesQueryDto } from './dto/pull-charges-query.dto';
+import { ChargeService } from './charge.service.js';
+import { ChargeItemDto } from './dto/push-charges.dto.js';
+import { PullChargesQueryDto } from './dto/pull-charges-query.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 /**
  * ChargeController mirrors the Express routes exactly:
@@ -33,6 +34,7 @@ export class ChargeController {
    * Accepts a raw array of charge objects (same shape the Flutter client sends).
    * Returns { success, synced } to keep parity with the Express response.
    */
+  @Public()
   @Post('push')
   @HttpCode(HttpStatus.OK)
   async push(
@@ -47,6 +49,7 @@ export class ChargeController {
    *
    * Returns charges updated after `since` that originated from a different device.
    */
+  @Public()
   @Get('pull')
   async pull(
     @Query() query: PullChargesQueryDto,

@@ -1,13 +1,15 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, ParseArrayPipe, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
-import { LedgerEntryService } from './ledger-entry.service';
+import { LedgerEntryService } from './ledger-entry.service.js';
 import { LedgerEntryItemDto } from './dto/ledger-entry-item.dto.js';
 import { PullLedgerEntriesQueryDto } from './dto/pull-ledger-entries-query.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 @Controller('entries')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class LedgerEntryController {
   constructor(private readonly ledgerEntryService: LedgerEntryService) {}
 
+  @Public()
   @Post('push')
   @HttpCode(HttpStatus.OK)
   async push(
@@ -17,6 +19,7 @@ export class LedgerEntryController {
     return { success: true, synced };
   }
 
+  @Public()
   @Get('pull')
   async pull(
     @Query() query: PullLedgerEntriesQueryDto,

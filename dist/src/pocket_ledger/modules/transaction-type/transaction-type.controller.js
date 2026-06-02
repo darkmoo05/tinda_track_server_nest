@@ -14,9 +14,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionTypeController = void 0;
 const common_1 = require("@nestjs/common");
-const transaction_type_service_1 = require("./transaction-type.service");
+const transaction_type_service_js_1 = require("./transaction-type.service.js");
 const transaction_type_item_dto_js_1 = require("./dto/transaction-type-item.dto.js");
 const pull_transaction_types_query_dto_js_1 = require("./dto/pull-transaction-types-query.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let TransactionTypeController = class TransactionTypeController {
     transactionTypeService;
     constructor(transactionTypeService) {
@@ -33,6 +34,7 @@ let TransactionTypeController = class TransactionTypeController {
 };
 exports.TransactionTypeController = TransactionTypeController;
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: transaction_type_item_dto_js_1.TransactionTypeItemDto, whitelist: true }))),
@@ -41,6 +43,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TransactionTypeController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
@@ -50,6 +53,6 @@ __decorate([
 exports.TransactionTypeController = TransactionTypeController = __decorate([
     (0, common_1.Controller)('transaction-types'),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true, whitelist: true })),
-    __metadata("design:paramtypes", [transaction_type_service_1.TransactionTypeService])
+    __metadata("design:paramtypes", [transaction_type_service_js_1.TransactionTypeService])
 ], TransactionTypeController);
 //# sourceMappingURL=transaction-type.controller.js.map

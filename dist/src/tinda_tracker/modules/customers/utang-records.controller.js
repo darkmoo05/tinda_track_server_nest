@@ -16,6 +16,7 @@ exports.UtangRecordsController = void 0;
 const common_1 = require("@nestjs/common");
 const customers_service_js_1 = require("./customers.service.js");
 const sync_dto_js_1 = require("./dto/sync.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let UtangRecordsController = class UtangRecordsController {
     customersService;
     constructor(customersService) {
@@ -32,6 +33,7 @@ let UtangRecordsController = class UtangRecordsController {
 };
 exports.UtangRecordsController = UtangRecordsController;
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -39,6 +41,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UtangRecordsController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),

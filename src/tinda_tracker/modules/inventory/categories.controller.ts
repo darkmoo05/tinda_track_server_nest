@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { InventoryService } from './inventory.service.js';
 import { CategoryRecordDto } from './dto/push-categories.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 @Controller('inventory/categories')
 export class CategoriesController {
@@ -13,6 +14,7 @@ export class CategoriesController {
   }
 
   /** Bulk upsert — called by the Flutter sync service. */
+  @Public()
   @Post('push')
   async push(
     @Body() body: CategoryRecordDto[],
@@ -25,6 +27,7 @@ export class CategoriesController {
    * Pull — returns all categories updated since [since] milliseconds epoch.
    * Called by the Flutter sync service to receive server-side changes.
    */
+  @Public()
   @Get('pull')
   async pull(
     @Query('since') since: string,

@@ -4,12 +4,14 @@ import {
   PullProductUnitConversionsQueryDto,
   PushProductUnitConversionDto,
 } from './dto/push-product-unit-conversions.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 @Controller('inventory/product-unit-conversions')
 export class ProductUnitConversionsController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   /** Bulk upsert from the Flutter sync service. */
+  @Public()
   @Post('push')
   async push(
     @Body() body: PushProductUnitConversionDto[],
@@ -19,6 +21,7 @@ export class ProductUnitConversionsController {
   }
 
   /** Pull — returns conversions updated since [since] ms. */
+  @Public()
   @Get('pull')
   async pull(
     @Query() query: PullProductUnitConversionsQueryDto,

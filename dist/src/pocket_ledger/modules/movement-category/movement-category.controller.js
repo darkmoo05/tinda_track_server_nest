@@ -14,9 +14,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MovementCategoryController = void 0;
 const common_1 = require("@nestjs/common");
-const movement_category_service_1 = require("./movement-category.service");
+const movement_category_service_js_1 = require("./movement-category.service.js");
 const movement_category_item_dto_js_1 = require("./dto/movement-category-item.dto.js");
 const pull_movement_categories_query_dto_js_1 = require("./dto/pull-movement-categories-query.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let MovementCategoryController = class MovementCategoryController {
     movementCategoryService;
     constructor(movementCategoryService) {
@@ -33,6 +34,7 @@ let MovementCategoryController = class MovementCategoryController {
 };
 exports.MovementCategoryController = MovementCategoryController;
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: movement_category_item_dto_js_1.MovementCategoryItemDto, whitelist: true }))),
@@ -41,6 +43,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], MovementCategoryController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
@@ -50,6 +53,6 @@ __decorate([
 exports.MovementCategoryController = MovementCategoryController = __decorate([
     (0, common_1.Controller)('movement-categories'),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true, whitelist: true })),
-    __metadata("design:paramtypes", [movement_category_service_1.MovementCategoryService])
+    __metadata("design:paramtypes", [movement_category_service_js_1.MovementCategoryService])
 ], MovementCategoryController);
 //# sourceMappingURL=movement-category.controller.js.map

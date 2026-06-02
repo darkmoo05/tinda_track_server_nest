@@ -16,6 +16,7 @@ exports.ProductUnitConversionsController = void 0;
 const common_1 = require("@nestjs/common");
 const inventory_service_js_1 = require("./inventory.service.js");
 const push_product_unit_conversions_dto_js_1 = require("./dto/push-product-unit-conversions.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let ProductUnitConversionsController = class ProductUnitConversionsController {
     inventoryService;
     constructor(inventoryService) {
@@ -32,6 +33,7 @@ let ProductUnitConversionsController = class ProductUnitConversionsController {
 };
 exports.ProductUnitConversionsController = ProductUnitConversionsController;
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -39,6 +41,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProductUnitConversionsController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),

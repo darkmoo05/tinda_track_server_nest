@@ -18,6 +18,7 @@ const customers_service_js_1 = require("./customers.service.js");
 const create_customer_dto_js_1 = require("./dto/create-customer.dto.js");
 const utang_dto_js_1 = require("./dto/utang.dto.js");
 const sync_dto_js_1 = require("./dto/sync.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let CustomersController = class CustomersController {
     customersService;
     constructor(customersService) {
@@ -64,6 +65,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "list", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -71,6 +73,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),

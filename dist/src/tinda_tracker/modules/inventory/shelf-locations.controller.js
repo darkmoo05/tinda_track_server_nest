@@ -18,6 +18,7 @@ const platform_express_1 = require("@nestjs/platform-express");
 const multer_1 = require("multer");
 const node_path_1 = require("node:path");
 const inventory_service_js_1 = require("./inventory.service.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 const UPLOAD_DIR = './uploads/shelf-locations';
 let ShelfLocationsController = class ShelfLocationsController {
     inventoryService;
@@ -56,6 +57,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ShelfLocationsController.prototype, "list", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -63,6 +65,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ShelfLocationsController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)('since')),
     __param(1, (0, common_1.Query)('deviceId')),

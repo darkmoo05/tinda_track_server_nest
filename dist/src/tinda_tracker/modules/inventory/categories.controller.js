@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CategoriesController = void 0;
 const common_1 = require("@nestjs/common");
 const inventory_service_js_1 = require("./inventory.service.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let CategoriesController = class CategoriesController {
     inventoryService;
     constructor(inventoryService) {
@@ -46,6 +47,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CategoriesController.prototype, "list", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -53,6 +55,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CategoriesController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)('since')),
     __param(1, (0, common_1.Query)('deviceId')),

@@ -24,6 +24,7 @@ const create_product_dto_js_1 = require("./dto/create-product.dto.js");
 const list_products_query_dto_js_1 = require("./dto/list-products-query.dto.js");
 const update_product_dto_js_1 = require("./dto/update-product.dto.js");
 const push_products_dto_js_1 = require("./dto/push-products.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 const UPLOAD_DIR = './uploads/products';
 (0, node_fs_1.mkdirSync)(UPLOAD_DIR, { recursive: true });
 let InventoryController = class InventoryController {
@@ -86,6 +87,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "list", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -93,6 +95,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),

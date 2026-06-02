@@ -14,9 +14,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FeeTransactionController = void 0;
 const common_1 = require("@nestjs/common");
-const fee_transaction_service_1 = require("./fee-transaction.service");
-const fee_transaction_item_dto_1 = require("./dto/fee-transaction-item.dto");
-const pull_fee_transactions_query_dto_1 = require("./dto/pull-fee-transactions-query.dto");
+const fee_transaction_service_js_1 = require("./fee-transaction.service.js");
+const fee_transaction_item_dto_js_1 = require("./dto/fee-transaction-item.dto.js");
+const pull_fee_transactions_query_dto_js_1 = require("./dto/pull-fee-transactions-query.dto.js");
+const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
 let FeeTransactionController = class FeeTransactionController {
     feeTransactionService;
     constructor(feeTransactionService) {
@@ -33,23 +34,25 @@ let FeeTransactionController = class FeeTransactionController {
 };
 exports.FeeTransactionController = FeeTransactionController;
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: fee_transaction_item_dto_1.FeeTransactionItemDto, whitelist: true }))),
+    __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: fee_transaction_item_dto_js_1.FeeTransactionItemDto, whitelist: true }))),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Array]),
     __metadata("design:returntype", Promise)
 ], FeeTransactionController.prototype, "push", null);
 __decorate([
+    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pull_fee_transactions_query_dto_1.PullFeeTransactionsQueryDto]),
+    __metadata("design:paramtypes", [pull_fee_transactions_query_dto_js_1.PullFeeTransactionsQueryDto]),
     __metadata("design:returntype", Promise)
 ], FeeTransactionController.prototype, "pull", null);
 exports.FeeTransactionController = FeeTransactionController = __decorate([
     (0, common_1.Controller)('fee-transactions'),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true, whitelist: true })),
-    __metadata("design:paramtypes", [fee_transaction_service_1.FeeTransactionService])
+    __metadata("design:paramtypes", [fee_transaction_service_js_1.FeeTransactionService])
 ], FeeTransactionController);
 //# sourceMappingURL=fee-transaction.controller.js.map

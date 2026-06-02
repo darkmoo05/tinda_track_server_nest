@@ -16,6 +16,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'node:path';
 import { InventoryService } from './inventory.service.js';
 import { ShelfLocationRecordDto } from './dto/push-shelf-locations.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 const UPLOAD_DIR = './uploads/shelf-locations';
 
@@ -30,6 +31,7 @@ export class ShelfLocationsController {
   }
 
   /** Bulk upsert — called by the Flutter sync service. */
+  @Public()
   @Post('push')
   async push(
     @Body() body: ShelfLocationRecordDto[],
@@ -42,6 +44,7 @@ export class ShelfLocationsController {
    * Pull — returns all shelf locations updated since [since] milliseconds epoch.
    * Called by the Flutter sync service to receive server-side changes.
    */
+  @Public()
   @Get('pull')
   async pull(
     @Query('since') since: string,

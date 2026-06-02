@@ -1,6 +1,6 @@
-import { ChargeService } from './charge.service';
-import { ChargeItemDto } from './dto/push-charges.dto';
-import { PullChargesQueryDto } from './dto/pull-charges-query.dto';
+import { ChargeService } from './charge.service.js';
+import { ChargeItemDto } from './dto/push-charges.dto.js';
+import { PullChargesQueryDto } from './dto/pull-charges-query.dto.js';
 export declare class ChargeController {
     private readonly chargeService;
     constructor(chargeService: ChargeService);

@@ -1,4 +1,4 @@
-import { LedgerEntryService } from './ledger-entry.service';
+import { LedgerEntryService } from './ledger-entry.service.js';
 import { LedgerEntryItemDto } from './dto/ledger-entry-item.dto.js';
 import { PullLedgerEntriesQueryDto } from './dto/pull-ledger-entries-query.dto.js';
 export declare class LedgerEntryController {

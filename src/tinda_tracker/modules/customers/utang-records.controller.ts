@@ -4,12 +4,14 @@ import {
   PullUtangRecordsQueryDto,
   PushUtangRecordDto,
 } from './dto/sync.dto.js';
+import { Public } from '../../../modules/auth/decorators/public.decorator.js';
 
 @Controller('utang-records')
 export class UtangRecordsController {
   constructor(private readonly customersService: CustomersService) {}
 
   /** Bulk upsert from the Flutter sync service. */
+  @Public()
   @Post('push')
   async push(
     @Body() body: PushUtangRecordDto[],
@@ -19,6 +21,7 @@ export class UtangRecordsController {
   }
 
   /** Pull — returns utang records updated since [since] ms; excludes own deviceId. */
+  @Public()
   @Get('pull')
   async pull(
     @Query() query: PullUtangRecordsQueryDto,

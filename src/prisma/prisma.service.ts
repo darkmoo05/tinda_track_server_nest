@@ -7,26 +7,99 @@ import { PrismaClient } from '@prisma/client';
 /**
  * PrismaService wraps the Prisma 7 client using composition.
  *
- * Prisma 7 requires connection info to be passed via a database adapter at
- * instantiation time rather than in the schema file. We use @prisma/adapter-pg
- * so a standard DATABASE_URL string still drives the connection.
- *
- * Model delegates (e.g. `charge`) are exposed as getters so callers can write
- *   this.prisma.charge.findMany(...)
- * just as they would if PrismaService extended PrismaClient directly.
+ * Configures soft-delete query filters, database lifecycle management,
+ * and slow-query warning instrumentation.
  */
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
   private readonly _client: PrismaClient;
+  private readonly _extendedClient: any;
   private readonly _pool: Pool;
 
   constructor(private readonly config: ConfigService) {
     const connectionString = config.getOrThrow<string>('DATABASE_URL');
     this._pool = new Pool({ connectionString });
     const adapter = new PrismaPg(this._pool);
-    // PrismaClient in v7 is a factory-produced class; adapter is required.
     this._client = new PrismaClient({ adapter } as any);
+
+    const SOFT_DELETE_MODELS = new Set([
+      'Charge',
+      'Party',
+      'TransactionType',
+      'MovementCategory',
+      'FeeTransaction',
+      'LedgerEntry',
+      'ProductCategory',
+      'ShelfLocation',
+      'Product',
+      'Sale',
+      'Customer',
+      'UtangRecord',
+    ]);
+
+    // Extend Prisma Client to automate soft-delete operations and query execution logging
+    this._extendedClient = this._client.$extends({
+      query: {
+        $allModels: {
+          async $allOperations({ model, operation, args, query }) {
+            const isSoftDeleteModel = model && SOFT_DELETE_MODELS.has(model);
+
+            // 1. Automatically filter out soft-deleted records on queries
+            if (
+              isSoftDeleteModel &&
+              (operation === 'findMany' ||
+                operation === 'findFirst' ||
+                operation === 'findUnique' ||
+                operation === 'count')
+            ) {
+              args.where = args.where || {};
+              const where = args.where as any;
+              if (where.isDeleted === undefined) {
+                where.isDeleted = false;
+              }
+            }
+
+            // 2. Intercept hard delete and convert to soft delete
+            if (isSoftDeleteModel && operation === 'delete') {
+              return (query as any)({
+                ...args,
+                operation: 'update',
+                args: {
+                  ...args,
+                  data: { isDeleted: true },
+                },
+              });
+            }
+
+            if (isSoftDeleteModel && operation === 'deleteMany') {
+              return (query as any)({
+                ...args,
+                operation: 'updateMany',
+                args: {
+                  ...args,
+                  data: { isDeleted: true },
+                },
+              });
+            }
+
+            // 3. Request performance monitoring wrapper
+            const start = Date.now();
+            try {
+              return await query(args);
+            } finally {
+              const duration = Date.now() - start;
+              if (duration > 150) {
+                Logger.warn(
+                  `Slow query detected: ${model}.${operation} took ${duration}ms`,
+                  'PrismaService',
+                );
+              }
+            }
+          },
+        },
+      },
+    });
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -43,75 +116,77 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ── Model delegates ───────────────────────────────────────────────────────
-  // Add a getter for every Prisma model that a feature module needs.
-  // This keeps injection ergonomics identical to the classic extend pattern.
+  // Exposed via the extended client so soft-deletes and query logging are applied.
 
   get charge() {
-    return this._client.charge;
+    return this._extendedClient.charge;
   }
 
   get party() {
-    return this._client.party;
+    return this._extendedClient.party;
   }
 
   get transactionType() {
-    return this._client.transactionType;
+    return this._extendedClient.transactionType;
   }
 
   get movementCategory() {
-    return this._client.movementCategory;
+    return this._extendedClient.movementCategory;
   }
 
   get ledgerEntry() {
-    return this._client.ledgerEntry;
+    return this._extendedClient.ledgerEntry;
   }
 
   get transaction() {
-    return this._client.transaction;
+    return this._extendedClient.transaction;
   }
 
   get product() {
-    return this._client.product;
+    return this._extendedClient.product;
   }
 
   get productCategory() {
-    return this._client.productCategory;
+    return this._extendedClient.productCategory;
   }
 
   get productUnitConversion() {
-    return this._client.productUnitConversion;
+    return this._extendedClient.productUnitConversion;
   }
 
   get shelfLocation() {
-    return this._client.shelfLocation;
+    return this._extendedClient.shelfLocation;
   }
 
   get stockMovement() {
-    return this._client.stockMovement;
+    return this._extendedClient.stockMovement;
   }
 
   get sale() {
-    return this._client.sale;
+    return this._extendedClient.sale;
   }
 
   get saleItem() {
-    return this._client.saleItem;
+    return this._extendedClient.saleItem;
   }
 
   get feeTransaction() {
-    return this._client.feeTransaction;
+    return this._extendedClient.feeTransaction;
   }
 
   get customer() {
-    return this._client.customer;
+    return this._extendedClient.customer;
   }
 
   get utangRecord() {
-    return this._client.utangRecord;
+    return this._extendedClient.utangRecord;
+  }
+
+  get user() {
+    return this._extendedClient.user;
   }
 
   async $transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {
-    return this._client.$transaction(callback as never) as Promise<T>;
+    return this._extendedClient.$transaction(callback as never) as Promise<T>;
   }
 }
-
