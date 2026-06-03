@@ -64,12 +64,20 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            this.logger.warn(
-              `Sync conflict: ProductCategory (syncId: ${r.syncId}) from device ` +
-                `${deviceId} rejected — server record is newer.`,
-            );
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify ProductCategory ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              this.logger.warn(
+                `Sync conflict: ProductCategory (syncId: ${r.syncId}) from device ` +
+                  `${deviceId} rejected — server record is newer.`,
+              );
+              continue;
+            }
           }
           if (r.isQuickAccess && !r.isDeleted) {
             const count = await tx.productCategory.count({
@@ -118,8 +126,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify ShelfLocation ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -158,8 +174,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify Product ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -204,8 +228,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify ProductUnitConversion ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -233,8 +265,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify Customer ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -263,8 +303,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify UtangRecord ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -292,8 +340,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify Sale ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const saleData = {
             userId,
@@ -343,8 +399,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify Charge ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -373,8 +437,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify Party ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -407,8 +479,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify TransactionType ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -438,8 +518,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify MovementCategory ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -467,8 +555,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify FeeTransaction ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -497,8 +593,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify Transaction ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,
@@ -546,8 +650,16 @@ export class SyncService {
           if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
             incomingUpdatedAt = new Date();
           }
-          if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
-            continue;
+          if (existing) {
+            if (existing.userId !== userId) {
+              this.logger.warn(
+                `Security Warning: User ${userId} attempted to modify LedgerEntry ${r.syncId} owned by User ${existing.userId}`,
+              );
+              continue;
+            }
+            if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+              continue;
+            }
           }
           const data = {
             userId,

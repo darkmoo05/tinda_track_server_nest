@@ -5,8 +5,21 @@ import { join } from 'node:path';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as Sentry from '@sentry/nestjs';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
+
+// Initialize Sentry monitoring if DSN is set
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [nodeProfilingIntegration()],
+    tracesSampleRate: 1.0,
+    profilesSampleRate: 1.0,
+    environment: process.env.NODE_ENV || 'development',
+  });
+}
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -24,11 +37,14 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Allow cross-origin requests from any origin in dev (devtunnel, emulator, real device).
-  // TODO: lock this down to specific domains before going to production.
+  // Parse CORS origins from environment variable in production
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+    : [];
+
   app.enableCors({
     origin: process.env.NODE_ENV === 'production'
-      ? [/localhost/, /127\.0\.0\.1/, /10\.0\.2\.2/]
+      ? (corsOrigins.length > 0 ? corsOrigins : [/localhost/, /127\.0\.0\.1/, /10\.0\.2\.2/])
       : true,                              // allow ALL origins in dev / tunnel
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,

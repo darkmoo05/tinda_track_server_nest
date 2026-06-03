@@ -18,12 +18,15 @@ exports.receiptStorage = (0, multer_1.diskStorage)({
         callback(null, receiptUploadDir);
     },
     filename: (_req, file, callback) => {
-        const extension = (0, node_path_1.extname)(file.originalname) || '.jpg';
+        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+        const originalExt = (0, node_path_1.extname)(file.originalname).toLowerCase();
+        const extension = allowedExtensions.includes(originalExt) ? originalExt : '.jpg';
         callback(null, `${Date.now()}-${(0, node_crypto_1.randomUUID)()}${extension}`);
     },
 });
 function receiptFileFilter(_req, file, callback) {
-    const isImage = file.mimetype.startsWith('image/');
-    callback(isImage ? null : new Error('Only image uploads are supported for receipts'), isImage);
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const isAllowed = allowedMimeTypes.includes(file.mimetype);
+    callback(isAllowed ? null : new Error('Only JPEG, PNG, and WEBP images are supported for receipts'), isAllowed);
 }
 //# sourceMappingURL=receipt-upload.storage.js.map

@@ -26,6 +26,7 @@ describe('TransactionController (Integration)', () => {
             getOrThrow: jest.fn().mockReturnValue(
               process.env.DATABASE_URL || 'postgresql://postgres:DarkMoon@localhost:5432/tinda_track?schema=public'
             ),
+            get: jest.fn().mockReturnValue(undefined),
           },
         },
         {

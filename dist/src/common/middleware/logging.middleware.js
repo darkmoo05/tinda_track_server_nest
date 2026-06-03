@@ -8,16 +8,22 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoggingMiddleware = void 0;
 const common_1 = require("@nestjs/common");
+const node_crypto_1 = require("node:crypto");
 let LoggingMiddleware = class LoggingMiddleware {
     logger = new common_1.Logger('HTTP');
     use(req, res, next) {
+        const correlationId = req.id ||
+            req.headers['x-correlation-id'] ||
+            req.headers['x-request-id'] ||
+            (0, node_crypto_1.randomUUID)();
+        res.setHeader('X-Correlation-Id', correlationId);
         const { method, originalUrl, ip } = req;
         const userAgent = req.get('user-agent') || '';
         const start = Date.now();
         res.on('finish', () => {
             const { statusCode } = res;
             const duration = Date.now() - start;
-            this.logger.log(`${method} ${originalUrl} ${statusCode} ${duration}ms - ${userAgent} ${ip}`);
+            this.logger.log(`[${correlationId}] ${method} ${originalUrl} ${statusCode} ${duration}ms - ${userAgent} ${ip}`);
         });
         next();
     }

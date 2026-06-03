@@ -17,7 +17,9 @@ export const receiptStorage = diskStorage({
     callback(null, receiptUploadDir);
   },
   filename: (_req, file, callback) => {
-    const extension = extname(file.originalname) || '.jpg';
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    const originalExt = extname(file.originalname).toLowerCase();
+    const extension = allowedExtensions.includes(originalExt) ? originalExt : '.jpg';
     callback(null, `${Date.now()}-${randomUUID()}${extension}`);
   },
 });
@@ -27,6 +29,11 @@ export function receiptFileFilter(
   file: Express.Multer.File,
   callback: (error: Error | null, acceptFile: boolean) => void,
 ): void {
-  const isImage = file.mimetype.startsWith('image/');
-  callback(isImage ? null : new Error('Only image uploads are supported for receipts'), isImage);
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const isAllowed = allowedMimeTypes.includes(file.mimetype);
+  callback(
+    isAllowed ? null : new Error('Only JPEG, PNG, and WEBP images are supported for receipts'),
+    isAllowed,
+  );
 }
+

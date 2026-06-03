@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, ParseFilePipeBuilder, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { TransactionDirection, WalletProvider } from '@prisma/client';
 import { CreateManualTransactionDto, CreateTransactionDto } from './dto/create-transaction.dto.js';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto.js';
@@ -47,6 +48,7 @@ export class TransactionController {
     return { success: true, data };
   }
 
+  @Throttle({ ocr: { limit: 5, ttl: 60000 } })
   @Post('receipt')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(

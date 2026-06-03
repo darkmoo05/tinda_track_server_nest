@@ -46,13 +46,34 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
-const prisma_service_1 = require("../../prisma/prisma.service");
+const node_crypto_1 = require("node:crypto");
+const prisma_service_js_1 = require("../../prisma/prisma.service.js");
 let AuthService = class AuthService {
     prisma;
     jwtService;
     constructor(prisma, jwtService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
+    }
+    hashToken(token) {
+        return (0, node_crypto_1.createHash)('sha256').update(token).digest('hex');
+    }
+    async generateTokens(user) {
+        const payload = { sub: user.id, username: user.username, role: user.role };
+        const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+        const refreshToken = (0, node_crypto_1.randomUUID)();
+        const hashedRefreshToken = this.hashToken(refreshToken);
+        await this.prisma.refreshToken.create({
+            data: {
+                token: hashedRefreshToken,
+                userId: user.id,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+        });
+        return {
+            accessToken,
+            refreshToken,
+        };
     }
     async register(dto) {
         const existing = await this.prisma.user.findUnique({
@@ -83,9 +104,9 @@ let AuthService = class AuthService {
         if (!passwordMatch) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        const payload = { sub: user.id, username: user.username, role: user.role };
+        const tokens = await this.generateTokens(user);
         return {
-            accessToken: this.jwtService.sign(payload),
+            ...tokens,
             user: {
                 id: user.id,
                 username: user.username,
@@ -93,11 +114,49 @@ let AuthService = class AuthService {
             },
         };
     }
+    async refresh(refreshToken) {
+        if (!refreshToken) {
+            throw new common_1.UnauthorizedException('Refresh token is required');
+        }
+        const hashedToken = this.hashToken(refreshToken);
+        const tokenRecord = await this.prisma.refreshToken.findUnique({
+            where: { token: hashedToken },
+            include: { user: true },
+        });
+        if (!tokenRecord || tokenRecord.isRevoked || tokenRecord.expiresAt < new Date()) {
+            if (tokenRecord) {
+                await this.prisma.refreshToken.delete({ where: { id: tokenRecord.id } }).catch(() => { });
+            }
+            throw new common_1.UnauthorizedException('Invalid or expired refresh token');
+        }
+        await this.prisma.refreshToken.delete({
+            where: { id: tokenRecord.id },
+        });
+        const tokens = await this.generateTokens(tokenRecord.user);
+        return {
+            ...tokens,
+            user: {
+                id: tokenRecord.user.id,
+                username: tokenRecord.user.username,
+                role: tokenRecord.user.role,
+            },
+        };
+    }
+    async logout(refreshToken) {
+        if (!refreshToken) {
+            return { success: true };
+        }
+        const hashedToken = this.hashToken(refreshToken);
+        await this.prisma.refreshToken.deleteMany({
+            where: { token: hashedToken },
+        });
+        return { success: true };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
         jwt_1.JwtService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

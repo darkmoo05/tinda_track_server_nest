@@ -16,6 +16,7 @@ const throttler_1 = require("@nestjs/throttler");
 const core_1 = require("@nestjs/core");
 const nestjs_pino_1 = require("nestjs-pino");
 const joi_1 = __importDefault(require("joi"));
+const node_crypto_1 = require("node:crypto");
 const prisma_module_js_1 = require("./prisma/prisma.module.js");
 const logging_middleware_js_1 = require("./common/middleware/logging.middleware.js");
 const charge_module_js_1 = require("./pocket_ledger/modules/charge/charge.module.js");
@@ -46,11 +47,16 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
                 validationSchema: joi_1.default.object({
+                    NODE_ENV: joi_1.default.string().valid('development', 'production', 'test').default('development'),
                     DATABASE_URL: joi_1.default.string().required(),
                     JWT_SECRET: joi_1.default.string().required(),
                     PORT: joi_1.default.number().default(8080),
                     THROTTLER_TTL: joi_1.default.number().default(60000),
                     THROTTLER_LIMIT: joi_1.default.number().default(100),
+                    CORS_ORIGINS: joi_1.default.string().optional(),
+                    SENTRY_DSN: joi_1.default.string().uri().optional(),
+                    POSTGRES_MAX_CONNECTIONS: joi_1.default.number().default(20),
+                    POSTGRES_IDLE_TIMEOUT: joi_1.default.number().default(30000),
                 }),
             }),
             nestjs_pino_1.LoggerModule.forRoot({
@@ -59,6 +65,10 @@ exports.AppModule = AppModule = __decorate([
                     transport: process.env.NODE_ENV !== 'production'
                         ? { target: 'pino-pretty', options: { colorize: true } }
                         : undefined,
+                    genReqId: (req) => req.headers['x-correlation-id'] || req.headers['x-request-id'] || (0, node_crypto_1.randomUUID)(),
+                    customAttributeKeys: {
+                        reqId: 'correlationId',
+                    },
                 },
             }),
             prisma_module_js_1.PrismaModule,
@@ -67,8 +77,19 @@ exports.AppModule = AppModule = __decorate([
                 inject: [config_1.ConfigService],
                 useFactory: (config) => [
                     {
+                        name: 'default',
                         ttl: config.get('THROTTLER_TTL') ?? 60000,
                         limit: config.get('THROTTLER_LIMIT') ?? 100,
+                    },
+                    {
+                        name: 'auth',
+                        ttl: 60000,
+                        limit: 10,
+                    },
+                    {
+                        name: 'ocr',
+                        ttl: 60000,
+                        limit: 5,
                     },
                 ],
             }),
@@ -88,6 +109,10 @@ exports.AppModule = AppModule = __decorate([
             fee_transaction_module_js_1.FeeTransactionModule,
         ],
         providers: [
+            {
+                provide: core_1.APP_GUARD,
+                useClass: throttler_1.ThrottlerGuard,
+            },
             {
                 provide: core_1.APP_GUARD,
                 useClass: jwt_auth_guard_js_1.JwtAuthGuard,

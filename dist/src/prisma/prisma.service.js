@@ -26,7 +26,13 @@ let PrismaService = PrismaService_1 = class PrismaService {
         this.config = config;
         const self = this;
         const connectionString = config.getOrThrow('DATABASE_URL');
-        this._pool = new pg_1.Pool({ connectionString });
+        const max = config.get('POSTGRES_MAX_CONNECTIONS') ?? 20;
+        const idleTimeoutMillis = config.get('POSTGRES_IDLE_TIMEOUT') ?? 30000;
+        this._pool = new pg_1.Pool({
+            connectionString,
+            max,
+            idleTimeoutMillis,
+        });
         const adapter = new adapter_pg_1.PrismaPg(this._pool);
         this._client = new client_1.PrismaClient({ adapter });
         const SOFT_DELETE_MODELS = new Set([
@@ -145,6 +151,9 @@ let PrismaService = PrismaService_1 = class PrismaService {
     }
     get user() {
         return this._extendedClient.user;
+    }
+    get refreshToken() {
+        return this._extendedClient.refreshToken;
     }
     async $transaction(callback) {
         return this._extendedClient.$transaction(callback);

@@ -20,7 +20,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {
     const self = this;
     const connectionString = config.getOrThrow<string>('DATABASE_URL');
-    this._pool = new Pool({ connectionString });
+    const max = config.get<number>('POSTGRES_MAX_CONNECTIONS') ?? 20;
+    const idleTimeoutMillis = config.get<number>('POSTGRES_IDLE_TIMEOUT') ?? 30000;
+
+    this._pool = new Pool({
+      connectionString,
+      max,
+      idleTimeoutMillis,
+    });
     const adapter = new PrismaPg(this._pool);
     this._client = new PrismaClient({ adapter } as any);
 
@@ -177,6 +184,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get user() {
     return this._extendedClient.user;
+  }
+
+  get refreshToken() {
+    return this._extendedClient.refreshToken;
   }
 
   async $transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {

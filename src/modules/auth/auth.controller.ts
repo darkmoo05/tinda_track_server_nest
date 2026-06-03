@@ -1,10 +1,12 @@
 import { Controller, Post, Body, Get } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { Public } from './decorators/public.decorator';
-import { GetUser } from './decorators/get-user.decorator';
+import { Throttle } from '@nestjs/throttler';
+import { AuthService } from './auth.service.js';
+import { RegisterDto } from './dto/register.dto.js';
+import { LoginDto } from './dto/login.dto.js';
+import { Public } from './decorators/public.decorator.js';
+import { GetUser } from './decorators/get-user.decorator.js';
 
+@Throttle({ auth: { limit: 10, ttl: 60000 } })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -25,4 +27,17 @@ export class AuthController {
   async me(@GetUser() user: any) {
     return { success: true, user };
   }
+
+  @Public()
+  @Post('refresh')
+  async refresh(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refresh(refreshToken);
+  }
+
+  @Public()
+  @Post('logout')
+  async logout(@Body('refreshToken') refreshToken: string) {
+    return this.authService.logout(refreshToken);
+  }
 }
+

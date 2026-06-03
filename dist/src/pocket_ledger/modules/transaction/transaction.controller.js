@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionController = void 0;
 const common_1 = require("@nestjs/common");
 const platform_express_1 = require("@nestjs/platform-express");
+const throttler_1 = require("@nestjs/throttler");
 const create_transaction_dto_js_1 = require("./dto/create-transaction.dto.js");
 const list_transactions_query_dto_js_1 = require("./dto/list-transactions-query.dto.js");
 const transaction_preview_dto_js_1 = require("./dto/transaction-preview.dto.js");
@@ -70,6 +71,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "createManual", null);
 __decorate([
+    (0, throttler_1.Throttle)({ ocr: { limit: 5, ttl: 60000 } }),
     (0, common_1.Post)('receipt'),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('receipt', {

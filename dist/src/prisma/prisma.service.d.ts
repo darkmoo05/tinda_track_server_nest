@@ -26,5 +26,6 @@ export declare class PrismaService implements OnModuleInit, OnModuleDestroy {
     get customer(): any;
     get utangRecord(): any;
     get user(): any;
+    get refreshToken(): any;
     $transaction<T>(callback: (client: any) => Promise<T>): Promise<T>;
 }

@@ -179,9 +179,8 @@ model LedgerEntry {
   transaction       Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
   user              User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([updatedAt])
+  @@index([userId, updatedAt])
   @@index([deviceId])
-  @@index([userId])
   @@map("ledger_entries")
 }
 
@@ -219,9 +218,8 @@ model Transaction {
   ledgerEntries      LedgerEntry[]
   user               User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([updatedAt])
+  @@index([userId, updatedAt])
   @@index([deviceId])
-  @@index([userId])
   @@map("transactions")
 }
 
@@ -247,8 +245,7 @@ model ProductCategory {
   user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([userId, name])
-  @@index([updatedAt])
-  @@index([userId])
+  @@index([userId, updatedAt])
   @@map("product_categories")
 }
 
@@ -275,8 +272,7 @@ model ShelfLocation {
   user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([userId, name])
-  @@index([updatedAt])
-  @@index([userId])
+  @@index([userId, updatedAt])
   @@map("shelf_locations")
 }
 
@@ -315,9 +311,8 @@ model Product {
   user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([userId, sku])
-  @@index([updatedAt])
+  @@index([userId, updatedAt])
   @@index([deviceId])
-  @@index([userId])
   @@map("products")
 }
 
@@ -376,9 +371,8 @@ model Sale {
   saleItems      SaleItem[]
   user           User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([updatedAt])
+  @@index([userId, updatedAt])
   @@index([deviceId])
-  @@index([userId])
   @@map("sales")
 }
 
@@ -415,9 +409,8 @@ model Customer {
   utangRecords UtangRecord[]
   user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([updatedAt])
+  @@index([userId, updatedAt])
   @@index([deviceId])
-  @@index([userId])
   @@map("customers")
 }
 
@@ -436,9 +429,8 @@ model UtangRecord {
   user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([customerId, createdAt])
-  @@index([updatedAt])
+  @@index([userId, updatedAt])
   @@index([deviceId])
-  @@index([userId])
   @@map("utang_records")
 }
 
@@ -470,8 +462,23 @@ model User {
   sales                Sale[]
   customers            Customer[]
   utangRecords         UtangRecord[]
+  refreshTokens        RefreshToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isRevoked Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 model DeviceSync {
@@ -481,3 +488,4 @@ model DeviceSync {
 
   @@map("device_syncs")
 }
+
