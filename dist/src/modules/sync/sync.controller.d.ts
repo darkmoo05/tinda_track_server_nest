@@ -3,7 +3,11 @@ import { SyncRequestDto } from './dto/sync.dto.js';
 export declare class SyncController {
     private readonly syncService;
     constructor(syncService: SyncService);
-    sync(body: SyncRequestDto): Promise<{
+    sync(req: {
+        user: {
+            id: string;
+        };
+    }, body: SyncRequestDto): Promise<{
         success: boolean;
         timestamp: number;
         pull: {

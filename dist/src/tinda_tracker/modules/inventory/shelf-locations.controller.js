@@ -18,59 +18,60 @@ const platform_express_1 = require("@nestjs/platform-express");
 const multer_1 = require("multer");
 const node_path_1 = require("node:path");
 const inventory_service_js_1 = require("./inventory.service.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 const UPLOAD_DIR = './uploads/shelf-locations';
 let ShelfLocationsController = class ShelfLocationsController {
     inventoryService;
     constructor(inventoryService) {
         this.inventoryService = inventoryService;
     }
-    async list() {
-        const data = await this.inventoryService.listShelfLocations();
+    async list(user) {
+        const data = await this.inventoryService.listShelfLocations(user.id);
         return { success: true, data };
     }
-    async push(body) {
-        const data = await this.inventoryService.pushShelfLocations(body);
+    async push(user, body) {
+        const data = await this.inventoryService.pushShelfLocations(user.id, body);
         return { success: true, data };
     }
-    async pull(since, _deviceId) {
+    async pull(user, since, _deviceId) {
         const sinceMs = parseInt(since ?? '0', 10);
-        const data = await this.inventoryService.pullShelfLocations(sinceMs);
+        const data = await this.inventoryService.pullShelfLocations(user.id, sinceMs);
         return { success: true, data };
     }
-    async uploadImage(id, file) {
+    async uploadImage(user, id, file) {
         if (!file)
             throw new common_1.BadRequestException('No file provided');
-        const data = await this.inventoryService.updateShelfLocationImage(id, file);
+        const data = await this.inventoryService.updateShelfLocationImage(user.id, id, file);
         return { success: true, data };
     }
-    async remove(id) {
-        const data = await this.inventoryService.deleteShelfLocation(id);
+    async remove(user, id) {
+        const data = await this.inventoryService.deleteShelfLocation(user.id, id);
         return { success: true, data };
     }
 };
 exports.ShelfLocationsController = ShelfLocationsController;
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ShelfLocationsController.prototype, "list", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], ShelfLocationsController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)('since')),
-    __param(1, (0, common_1.Query)('deviceId')),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('since')),
+    __param(2, (0, common_1.Query)('deviceId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], ShelfLocationsController.prototype, "pull", null);
 __decorate([
@@ -93,17 +94,19 @@ __decorate([
         },
         limits: { fileSize: 5 * 1024 * 1024 },
     })),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.UploadedFile)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], ShelfLocationsController.prototype, "uploadImage", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], ShelfLocationsController.prototype, "remove", null);
 exports.ShelfLocationsController = ShelfLocationsController = __decorate([

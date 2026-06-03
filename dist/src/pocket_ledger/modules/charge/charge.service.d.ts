@@ -6,7 +6,7 @@ export declare class ChargeService {
     private readonly prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    push(records: ChargeItemDto[]): Promise<number>;
-    pull(query: PullChargesQueryDto): Promise<Charge[]>;
-    findApplicableCharge(amount: number, transactionTypeKey?: string): Promise<Charge | null>;
+    push(userId: string, records: ChargeItemDto[]): Promise<number>;
+    pull(userId: string, query: PullChargesQueryDto): Promise<Charge[]>;
+    findApplicableCharge(userId: string, amount: number, transactionTypeKey?: string): Promise<Charge | null>;
 }

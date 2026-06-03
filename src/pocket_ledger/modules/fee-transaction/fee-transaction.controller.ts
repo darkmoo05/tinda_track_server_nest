@@ -13,7 +13,7 @@ import {
 import { FeeTransactionService } from './fee-transaction.service.js';
 import { FeeTransactionItemDto } from './dto/fee-transaction-item.dto.js';
 import { PullFeeTransactionsQueryDto } from './dto/pull-fee-transactions-query.dto.js';
-import { Public } from '../../../modules/auth/decorators/public.decorator.js';
+import { CurrentUser, type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 
 /**
  * FeeTransactionController exposes the sync endpoints for fee records:
@@ -30,16 +30,16 @@ export class FeeTransactionController {
    *
    * Accepts an array of fee transaction objects. Returns { success, synced }.
    */
-  @Public()
   @Post('push')
   @HttpCode(HttpStatus.OK)
   async push(
+    @CurrentUser() user: AuthUser,
     @Body(
       new ParseArrayPipe({ items: FeeTransactionItemDto, whitelist: true }),
     )
     body: FeeTransactionItemDto[],
   ): Promise<{ success: boolean; synced: number }> {
-    const synced = await this.feeTransactionService.push(body);
+    const synced = await this.feeTransactionService.push(user.id, body);
     return { success: true, synced };
   }
 
@@ -48,12 +48,12 @@ export class FeeTransactionController {
    *
    * Returns fee transactions updated after `since` from other devices.
    */
-  @Public()
   @Get('pull')
   async pull(
+    @CurrentUser() user: AuthUser,
     @Query() query: PullFeeTransactionsQueryDto,
   ): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.feeTransactionService.pull(query);
+    const data = await this.feeTransactionService.pull(user.id, query);
     return { success: true, data };
   }
 }

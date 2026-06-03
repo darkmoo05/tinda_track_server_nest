@@ -19,16 +19,18 @@ let MovementCategoryService = MovementCategoryService_1 = class MovementCategory
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async push(records) {
+    async push(userId, records) {
         await Promise.all(records.map((record) => this.prisma.movementCategory.upsert({
             where: { syncId: record.syncId },
             create: {
+                userId,
                 syncId: record.syncId,
                 deviceId: record.deviceId,
                 name: record.name,
                 isDeleted: record.isDeleted ?? false,
             },
             update: {
+                userId,
                 deviceId: record.deviceId,
                 name: record.name,
                 isDeleted: record.isDeleted ?? false,
@@ -37,17 +39,18 @@ let MovementCategoryService = MovementCategoryService_1 = class MovementCategory
         this.logger.log(`Pushed ${records.length} movement category record(s)`);
         return records.length;
     }
-    async pull(query) {
+    async pull(userId, query) {
         const { since, deviceId } = query;
         const sinceMs = Number(since ?? '0');
         const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
         return this.prisma.movementCategory.findMany({
             where: isIncrementalSync
                 ? {
+                    userId,
                     updatedAt: { gt: new Date(sinceMs) },
                     ...(deviceId ? { deviceId: { not: deviceId } } : {}),
                 }
-                : { isDeleted: false },
+                : { userId, isDeleted: false },
             orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
         });
     }

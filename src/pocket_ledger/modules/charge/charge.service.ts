@@ -20,7 +20,7 @@ export class ChargeService {
    *
    * @returns number of records processed
    */
-  async push(records: ChargeItemDto[]): Promise<number> {
+  async push(userId: string, records: ChargeItemDto[]): Promise<number> {
     // Each upsert is keyed on syncId so it is inherently idempotent.
     // We run them in parallel; if you need strict all-or-nothing atomicity
     // across every record, wrap in prisma.$transaction(() => Promise.all(...)).
@@ -29,6 +29,7 @@ export class ChargeService {
         this.prisma.charge.upsert({
           where: { syncId: r.syncId },
           create: {
+            userId,
             syncId: r.syncId,
             deviceId: r.deviceId,
             lowerBound: r.lowerBound,
@@ -38,6 +39,7 @@ export class ChargeService {
             isDeleted: r.isDeleted ?? false,
           },
           update: {
+            userId,
             deviceId: r.deviceId,
             lowerBound: r.lowerBound,
             upperBound: r.upperBound,
@@ -57,10 +59,11 @@ export class ChargeService {
    * Return all charges updated after `since` that did not originate from
    * `deviceId`. Supports incremental sync from offline clients.
    *
+   * @param userId     - Scope results to this user
    * @param query.since    - Unix ms timestamp (optional)
    * @param query.deviceId - Exclude this device's own records (optional)
    */
-  async pull(query: PullChargesQueryDto): Promise<Charge[]> {
+  async pull(userId: string, query: PullChargesQueryDto): Promise<Charge[]> {
     const { since, deviceId } = query;
     const sinceMs = Number(since ?? '0');
     const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
@@ -68,17 +71,19 @@ export class ChargeService {
     return this.prisma.charge.findMany({
       where: isIncrementalSync
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(deviceId ? { deviceId: { not: deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }
 
-  async findApplicableCharge(amount: number, transactionTypeKey?: string): Promise<Charge | null> {
+  async findApplicableCharge(userId: string, amount: number, transactionTypeKey?: string): Promise<Charge | null> {
     return this.prisma.charge.findFirst({
       where: {
+        userId,
         isDeleted: false,
         lowerBound: { lte: amount },
         upperBound: { gte: amount },
@@ -87,4 +92,5 @@ export class ChargeService {
       orderBy: [{ lowerBound: 'asc' }, { createdAt: 'asc' }],
     });
   }
+
 }

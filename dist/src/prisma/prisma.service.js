@@ -24,6 +24,7 @@ let PrismaService = PrismaService_1 = class PrismaService {
     _pool;
     constructor(config) {
         this.config = config;
+        const self = this;
         const connectionString = config.getOrThrow('DATABASE_URL');
         this._pool = new pg_1.Pool({ connectionString });
         const adapter = new adapter_pg_1.PrismaPg(this._pool);
@@ -59,23 +60,15 @@ let PrismaService = PrismaService_1 = class PrismaService {
                             }
                         }
                         if (isSoftDeleteModel && operation === 'delete') {
-                            return query({
-                                ...args,
-                                operation: 'update',
-                                args: {
-                                    ...args,
-                                    data: { isDeleted: true },
-                                },
+                            return self._extendedClient[model].update({
+                                where: args.where,
+                                data: { isDeleted: true },
                             });
                         }
                         if (isSoftDeleteModel && operation === 'deleteMany') {
-                            return query({
-                                ...args,
-                                operation: 'updateMany',
-                                args: {
-                                    ...args,
-                                    data: { isDeleted: true },
-                                },
+                            return self._extendedClient[model].updateMany({
+                                where: args.where,
+                                data: { isDeleted: true },
                             });
                         }
                         const start = Date.now();

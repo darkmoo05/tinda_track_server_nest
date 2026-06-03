@@ -16,30 +16,30 @@ export declare class InventoryService {
     private readonly prisma;
     private readonly storage;
     constructor(prisma: PrismaService, storage: IStorageProvider);
-    create(dto: CreateProductDto): Promise<ProductWithConversions>;
-    list(query: ListProductsQueryDto): Promise<ProductWithConversions[]>;
-    update(productId: string, dto: UpdateProductDto): Promise<ProductWithConversions>;
-    updateImage(productId: string, file: Express.Multer.File): Promise<Product>;
-    adjustStock(productId: string, dto: AdjustStockDto): Promise<{
+    create(userId: string, dto: CreateProductDto): Promise<ProductWithConversions>;
+    list(userId: string, query: ListProductsQueryDto): Promise<ProductWithConversions[]>;
+    update(userId: string, productId: string, dto: UpdateProductDto): Promise<ProductWithConversions>;
+    updateImage(userId: string, productId: string, file: Express.Multer.File): Promise<Product>;
+    adjustStock(userId: string, productId: string, dto: AdjustStockDto): Promise<{
         product: Product;
         movement: StockMovement;
     }>;
-    getMovements(productId: string): Promise<StockMovement[]>;
-    remove(productId: string): Promise<Product>;
+    getMovements(userId: string, productId: string): Promise<StockMovement[]>;
+    remove(userId: string, productId: string): Promise<Product>;
     private ensureProductExists;
-    pushCategories(records: CategoryRecordDto[]): Promise<ProductCategory[]>;
-    pullCategories(sinceMs: number): Promise<ProductCategory[]>;
+    pushCategories(userId: string, records: CategoryRecordDto[]): Promise<ProductCategory[]>;
+    pullCategories(userId: string, sinceMs: number): Promise<ProductCategory[]>;
     listCategories(): Promise<ProductCategory[]>;
     deleteCategory(id: string): Promise<ProductCategory>;
     private assertQuickAccessCapAfterPush;
-    pushShelfLocations(records: ShelfLocationRecordDto[]): Promise<ShelfLocation[]>;
-    pullShelfLocations(sinceMs: number): Promise<ShelfLocation[]>;
-    listShelfLocations(): Promise<ShelfLocation[]>;
-    deleteShelfLocation(id: string): Promise<ShelfLocation>;
-    updateShelfLocationImage(id: string, file: Express.Multer.File): Promise<ShelfLocation>;
-    pushProducts(records: PushProductDto[]): Promise<number>;
-    pullProducts(query: PullProductsQueryDto): Promise<Product[]>;
-    pushProductUnitConversions(records: PushProductUnitConversionDto[]): Promise<number>;
-    pullProductUnitConversions(query: PullProductUnitConversionsQueryDto): Promise<ProductUnitConversion[]>;
+    pushShelfLocations(userId: string, records: ShelfLocationRecordDto[]): Promise<ShelfLocation[]>;
+    pullShelfLocations(userId: string, sinceMs: number): Promise<ShelfLocation[]>;
+    listShelfLocations(userId: string): Promise<ShelfLocation[]>;
+    deleteShelfLocation(userId: string, id: string): Promise<ShelfLocation>;
+    updateShelfLocationImage(userId: string, id: string, file: Express.Multer.File): Promise<ShelfLocation>;
+    pushProducts(userId: string, records: PushProductDto[]): Promise<number>;
+    pullProducts(userId: string, query: PullProductsQueryDto): Promise<Product[]>;
+    pushProductUnitConversions(userId: string, records: PushProductUnitConversionDto[]): Promise<number>;
+    pullProductUnitConversions(userId: string, query: PullProductUnitConversionsQueryDto): Promise<ProductUnitConversion[]>;
 }
 export {};

@@ -1,5 +1,6 @@
 import { InventoryService } from './inventory.service.js';
 import { CategoryRecordDto } from './dto/push-categories.dto.js';
+import { type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 export declare class CategoriesController {
     private readonly inventoryService;
     constructor(inventoryService: InventoryService);
@@ -7,11 +8,11 @@ export declare class CategoriesController {
         success: boolean;
         data: unknown[];
     }>;
-    push(body: CategoryRecordDto[]): Promise<{
+    push(user: AuthUser, body: CategoryRecordDto[]): Promise<{
         success: boolean;
         data: unknown[];
     }>;
-    pull(since: string, _deviceId?: string): Promise<{
+    pull(user: AuthUser, since: string, _deviceId?: string): Promise<{
         success: boolean;
         data: unknown[];
     }>;

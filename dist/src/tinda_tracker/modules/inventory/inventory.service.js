@@ -28,9 +28,14 @@ let InventoryService = class InventoryService {
         this.prisma = prisma;
         this.storage = storage;
     }
-    async create(dto) {
+    async create(userId, dto) {
         const existing = await this.prisma.product.findUnique({
-            where: { sku: dto.sku },
+            where: {
+                userId_sku: {
+                    userId,
+                    sku: dto.sku,
+                },
+            },
         });
         if (existing && !existing.isDeleted) {
             throw new common_1.ConflictException({
@@ -58,6 +63,7 @@ let InventoryService = class InventoryService {
             }
         }
         const fields = {
+            userId,
             deviceId: dto.deviceId,
             name: dto.name,
             sku: dto.sku,
@@ -77,6 +83,7 @@ let InventoryService = class InventoryService {
                 ? {
                     unitConversions: {
                         create: dto.unitConversions.map((c) => ({
+                            userId,
                             syncId: c.syncId ?? (0, node_crypto_1.randomUUID)(),
                             unitName: c.unitName,
                             conversionFactor: c.conversionFactor,
@@ -100,9 +107,10 @@ let InventoryService = class InventoryService {
             include: { unitConversions: true },
         });
     }
-    async list(query) {
+    async list(userId, query) {
         return this.prisma.product.findMany({
             where: {
+                userId,
                 isDeleted: query.includeDeleted ? undefined : false,
                 ...(query.search
                     ? {
@@ -119,8 +127,8 @@ let InventoryService = class InventoryService {
             include: { unitConversions: true },
         });
     }
-    async update(productId, dto) {
-        await this.ensureProductExists(productId);
+    async update(userId, productId, dto) {
+        await this.ensureProductExists(userId, productId);
         let categoryId;
         let resolvedCategory = dto.category;
         if (dto.categorySyncId) {
@@ -166,6 +174,7 @@ let InventoryService = class InventoryService {
                         unitConversions: {
                             deleteMany: {},
                             create: dto.unitConversions.map((c) => ({
+                                userId,
                                 syncId: c.syncId ?? (0, node_crypto_1.randomUUID)(),
                                 unitName: c.unitName,
                                 conversionFactor: c.conversionFactor,
@@ -179,11 +188,11 @@ let InventoryService = class InventoryService {
             include: { unitConversions: true },
         });
     }
-    async updateImage(productId, file) {
+    async updateImage(userId, productId, file) {
         const existing = await this.prisma.product.findUnique({ where: { id: productId } });
-        if (!existing || existing.isDeleted)
+        if (!existing || existing.isDeleted || existing.userId !== userId)
             throw new common_1.NotFoundException('Product not found');
-        const imageUrl = `/uploads/products/${file.filename}`;
+        const imageUrl = await this.storage.uploadFile(file, 'uploads/products');
         const updated = await this.prisma.product.update({
             where: { id: productId },
             data: { imageUrl },
@@ -198,10 +207,10 @@ let InventoryService = class InventoryService {
         }
         return updated;
     }
-    async adjustStock(productId, dto) {
+    async adjustStock(userId, productId, dto) {
         return this.prisma.$transaction(async (client) => {
             const product = await client.product.findUnique({ where: { id: productId } });
-            if (!product || product.isDeleted) {
+            if (!product || product.isDeleted || product.userId !== userId) {
                 throw new common_1.NotFoundException('Product not found');
             }
             const previousQuantity = product.stockInBaseUnit;
@@ -229,32 +238,33 @@ let InventoryService = class InventoryService {
             return { product: updatedProduct, movement };
         });
     }
-    async getMovements(productId) {
-        await this.ensureProductExists(productId);
+    async getMovements(userId, productId) {
+        await this.ensureProductExists(userId, productId);
         return this.prisma.stockMovement.findMany({
             where: { productId },
             orderBy: { createdAt: 'desc' },
             take: 200,
         });
     }
-    async remove(productId) {
-        await this.ensureProductExists(productId);
+    async remove(userId, productId) {
+        await this.ensureProductExists(userId, productId);
         return this.prisma.product.update({
             where: { id: productId },
             data: { isDeleted: true, isActive: false },
         });
     }
-    async ensureProductExists(productId) {
+    async ensureProductExists(userId, productId) {
         const product = await this.prisma.product.findUnique({ where: { id: productId } });
-        if (!product || product.isDeleted) {
+        if (!product || product.isDeleted || product.userId !== userId) {
             throw new common_1.NotFoundException('Product not found');
         }
     }
-    async pushCategories(records) {
-        await this.assertQuickAccessCapAfterPush(records);
+    async pushCategories(userId, records) {
+        await this.assertQuickAccessCapAfterPush(userId, records);
         const results = [];
         for (const r of records) {
             const data = {
+                userId,
                 name: r.name,
                 description: r.description ?? '',
                 examples: r.examples ?? '',
@@ -265,7 +275,12 @@ let InventoryService = class InventoryService {
                 where: { syncId: r.syncId },
             });
             item ??= await this.prisma.productCategory.findUnique({
-                where: { name: r.name },
+                where: {
+                    userId_name: {
+                        userId,
+                        name: r.name,
+                    },
+                },
             });
             if (item) {
                 item = await this.prisma.productCategory.update({
@@ -282,10 +297,12 @@ let InventoryService = class InventoryService {
         }
         return results;
     }
-    async pullCategories(sinceMs) {
-        const since = new Date(sinceMs);
+    async pullCategories(userId, sinceMs) {
+        const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
         return this.prisma.productCategory.findMany({
-            where: { updatedAt: { gte: since } },
+            where: isIncrementalSync
+                ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+                : { userId, isDeleted: false },
             orderBy: { updatedAt: 'asc' },
         });
     }
@@ -304,7 +321,7 @@ let InventoryService = class InventoryService {
             data: { isDeleted: true },
         });
     }
-    async assertQuickAccessCapAfterPush(records) {
+    async assertQuickAccessCapAfterPush(userId, records) {
         const incomingSyncIds = records.map((r) => r.syncId);
         const incomingNames = records.map((r) => r.name);
         const incomingPinnedSyncIds = new Set(records
@@ -312,6 +329,7 @@ let InventoryService = class InventoryService {
             .map((r) => r.syncId));
         const otherPinned = await this.prisma.productCategory.count({
             where: {
+                userId,
                 isQuickAccess: true,
                 isDeleted: false,
                 syncId: { notIn: incomingSyncIds },
@@ -328,21 +346,35 @@ let InventoryService = class InventoryService {
             });
         }
     }
-    async pushShelfLocations(records) {
+    async pushShelfLocations(userId, records) {
         const results = [];
         for (const r of records) {
             const data = {
+                userId,
                 name: r.name,
                 description: r.description ?? '',
                 examples: r.examples ?? '',
+                imageUrl: r.imageUrl ?? null,
                 isDeleted: r.isDeleted ?? false,
             };
             let item = await this.prisma.shelfLocation.findUnique({
                 where: { syncId: r.syncId },
             });
             item ??= await this.prisma.shelfLocation.findUnique({
-                where: { name: r.name },
+                where: {
+                    userId_name: {
+                        userId,
+                        name: r.name,
+                    },
+                },
             });
+            if (item && item.imageUrl && (r.imageUrl === null || r.imageUrl === undefined || r.imageUrl !== item.imageUrl)) {
+                const filename = item.imageUrl.split('/').pop();
+                if (filename) {
+                    const oldPath = (0, node_path_1.join)('./uploads/shelf-locations', filename);
+                    (0, promises_1.unlink)(oldPath).catch(() => { });
+                }
+            }
             if (item) {
                 item = await this.prisma.shelfLocation.update({
                     where: { id: item.id },
@@ -358,31 +390,33 @@ let InventoryService = class InventoryService {
         }
         return results;
     }
-    async pullShelfLocations(sinceMs) {
-        const since = new Date(sinceMs);
+    async pullShelfLocations(userId, sinceMs) {
+        const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
         return this.prisma.shelfLocation.findMany({
-            where: { updatedAt: { gte: since } },
+            where: isIncrementalSync
+                ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+                : { userId, isDeleted: false },
             orderBy: { updatedAt: 'asc' },
         });
     }
-    async listShelfLocations() {
+    async listShelfLocations(userId) {
         return this.prisma.shelfLocation.findMany({
-            where: { isDeleted: false },
+            where: { userId, isDeleted: false },
             orderBy: { name: 'asc' },
         });
     }
-    async deleteShelfLocation(id) {
+    async deleteShelfLocation(userId, id) {
         const existing = await this.prisma.shelfLocation.findUnique({ where: { id } });
-        if (!existing)
+        if (!existing || existing.isDeleted || existing.userId !== userId)
             throw new common_1.NotFoundException('Shelf location not found');
         return this.prisma.shelfLocation.update({
             where: { id },
             data: { isDeleted: true },
         });
     }
-    async updateShelfLocationImage(id, file) {
+    async updateShelfLocationImage(userId, id, file) {
         const existing = await this.prisma.shelfLocation.findUnique({ where: { id } });
-        if (!existing || existing.isDeleted)
+        if (!existing || existing.isDeleted || existing.userId !== userId)
             throw new common_1.NotFoundException('Shelf location not found');
         const imageUrl = await this.storage.uploadFile(file, 'uploads/shelf-locations');
         const updated = await this.prisma.shelfLocation.update({
@@ -398,20 +432,29 @@ let InventoryService = class InventoryService {
         }
         return updated;
     }
-    async pushProducts(records) {
+    async pushProducts(userId, records) {
         let synced = 0;
         for (const r of records) {
             let existing = await this.prisma.product.findUnique({
                 where: { syncId: r.syncId },
             });
             existing ??= await this.prisma.product.findUnique({
-                where: { sku: r.sku },
+                where: {
+                    userId_sku: {
+                        userId,
+                        sku: r.sku,
+                    },
+                },
             });
-            const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                incomingUpdatedAt = new Date();
+            }
             if (existing && existing.updatedAt > incomingUpdatedAt) {
                 continue;
             }
             const data = {
+                userId,
                 deviceId: r.deviceId ?? null,
                 name: r.name,
                 sku: r.sku,
@@ -430,6 +473,13 @@ let InventoryService = class InventoryService {
                 categoryId: r.categoryId ?? null,
                 shelfLocationId: r.shelfLocationId ?? null,
             };
+            if (existing && existing.imageUrl && (r.imageUrl === null || r.imageUrl === undefined || r.imageUrl !== existing.imageUrl)) {
+                const filename = existing.imageUrl.split('/').pop();
+                if (filename) {
+                    const oldPath = (0, node_path_1.join)('./uploads/products', filename);
+                    (0, promises_1.unlink)(oldPath).catch(() => { });
+                }
+            }
             if (existing) {
                 await this.prisma.product.update({
                     where: { id: existing.id },
@@ -445,29 +495,34 @@ let InventoryService = class InventoryService {
         }
         return synced;
     }
-    async pullProducts(query) {
+    async pullProducts(userId, query) {
         const sinceMs = Number(query.since ?? '0');
         const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
         return this.prisma.product.findMany({
             where: isIncremental
                 ? {
+                    userId,
                     updatedAt: { gt: new Date(sinceMs) },
                     ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
                 }
-                : { isDeleted: false },
+                : { userId, isDeleted: false },
             orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
         });
     }
-    async pushProductUnitConversions(records) {
+    async pushProductUnitConversions(userId, records) {
         let synced = 0;
         for (const r of records) {
             const existing = await this.prisma.productUnitConversion.findUnique({
                 where: { syncId: r.syncId },
             });
-            const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                incomingUpdatedAt = new Date();
+            }
             if (existing && existing.updatedAt > incomingUpdatedAt)
                 continue;
             const data = {
+                userId,
                 productId: r.productId,
                 unitName: r.unitName,
                 conversionFactor: r.conversionFactor,
@@ -489,11 +544,13 @@ let InventoryService = class InventoryService {
         }
         return synced;
     }
-    async pullProductUnitConversions(query) {
+    async pullProductUnitConversions(userId, query) {
         const sinceMs = Number(query.since ?? '0');
         const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
         return this.prisma.productUnitConversion.findMany({
-            where: isIncremental ? { updatedAt: { gt: new Date(sinceMs) } } : {},
+            where: isIncremental
+                ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+                : { userId },
             orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
         });
     }

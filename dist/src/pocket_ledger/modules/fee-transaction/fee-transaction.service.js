@@ -19,10 +19,11 @@ let FeeTransactionService = FeeTransactionService_1 = class FeeTransactionServic
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async push(records) {
+    async push(userId, records) {
         await Promise.all(records.map((r) => this.prisma.feeTransaction.upsert({
             where: { syncId: r.syncId },
             create: {
+                userId,
                 syncId: r.syncId,
                 deviceId: r.deviceId,
                 relatedTransactionSyncId: r.relatedTransactionSyncId ?? null,
@@ -32,6 +33,7 @@ let FeeTransactionService = FeeTransactionService_1 = class FeeTransactionServic
                 isDeleted: r.isDeleted ?? false,
             },
             update: {
+                userId,
                 deviceId: r.deviceId,
                 relatedTransactionSyncId: r.relatedTransactionSyncId ?? null,
                 feeAmount: r.feeAmount,
@@ -43,17 +45,18 @@ let FeeTransactionService = FeeTransactionService_1 = class FeeTransactionServic
         this.logger.log(`Pushed ${records.length} fee transaction(s)`);
         return records.length;
     }
-    async pull(query) {
+    async pull(userId, query) {
         const { since, deviceId } = query;
         const sinceMs = Number(since ?? '0');
         const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
         return this.prisma.feeTransaction.findMany({
             where: isIncrementalSync
                 ? {
+                    userId,
                     updatedAt: { gt: new Date(sinceMs) },
                     ...(deviceId ? { deviceId: { not: deviceId } } : {}),
                 }
-                : { isDeleted: false },
+                : { userId, isDeleted: false },
             orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
         });
     }

@@ -1,7 +1,9 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { LoggerModule } from 'nestjs-pino';
+import Joi from 'joi';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { LoggingMiddleware } from './common/middleware/logging.middleware.js';
 
@@ -39,14 +41,37 @@ import { RolesGuard } from './modules/auth/guards/roles.guard.js';
  */
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: Joi.object({
+        DATABASE_URL: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        PORT: Joi.number().default(8080),
+        THROTTLER_TTL: Joi.number().default(60000),
+        THROTTLER_LIMIT: Joi.number().default(100),
+      }),
+    }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+        transport: process.env.NODE_ENV !== 'production'
+          ? { target: 'pino-pretty', options: { colorize: true } }
+          : undefined,
+      },
+    }),
     PrismaModule,
 
-    // API Rate-limiting: Max 100 requests per 60 seconds
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    // API Rate-limiting: Max 100 requests per 60 seconds (dynamic config)
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.get<number>('THROTTLER_TTL') ?? 60000,
+          limit: config.get<number>('THROTTLER_LIMIT') ?? 100,
+        },
+      ],
+    }),
 
     // ── System & Security Modules ─────────────────────────────────────────
     AuthModule,

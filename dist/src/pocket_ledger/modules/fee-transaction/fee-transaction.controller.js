@@ -17,37 +17,37 @@ const common_1 = require("@nestjs/common");
 const fee_transaction_service_js_1 = require("./fee-transaction.service.js");
 const fee_transaction_item_dto_js_1 = require("./dto/fee-transaction-item.dto.js");
 const pull_fee_transactions_query_dto_js_1 = require("./dto/pull-fee-transactions-query.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let FeeTransactionController = class FeeTransactionController {
     feeTransactionService;
     constructor(feeTransactionService) {
         this.feeTransactionService = feeTransactionService;
     }
-    async push(body) {
-        const synced = await this.feeTransactionService.push(body);
+    async push(user, body) {
+        const synced = await this.feeTransactionService.push(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.feeTransactionService.pull(query);
+    async pull(user, query) {
+        const data = await this.feeTransactionService.pull(user.id, query);
         return { success: true, data };
     }
 };
 exports.FeeTransactionController = FeeTransactionController;
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: fee_transaction_item_dto_js_1.FeeTransactionItemDto, whitelist: true }))),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: fee_transaction_item_dto_js_1.FeeTransactionItemDto, whitelist: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], FeeTransactionController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pull_fee_transactions_query_dto_js_1.PullFeeTransactionsQueryDto]),
+    __metadata("design:paramtypes", [Object, pull_fee_transactions_query_dto_js_1.PullFeeTransactionsQueryDto]),
     __metadata("design:returntype", Promise)
 ], FeeTransactionController.prototype, "pull", null);
 exports.FeeTransactionController = FeeTransactionController = __decorate([

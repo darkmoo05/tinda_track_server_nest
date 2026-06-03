@@ -17,37 +17,37 @@ const common_1 = require("@nestjs/common");
 const party_service_js_1 = require("./party.service.js");
 const party_item_dto_js_1 = require("./dto/party-item.dto.js");
 const pull_parties_query_dto_js_1 = require("./dto/pull-parties-query.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let PartyController = class PartyController {
     partyService;
     constructor(partyService) {
         this.partyService = partyService;
     }
-    async push(body) {
-        const synced = await this.partyService.push(body);
+    async push(user, body) {
+        const synced = await this.partyService.push(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.partyService.pull(query);
+    async pull(user, query) {
+        const data = await this.partyService.pull(user.id, query);
         return { success: true, data };
     }
 };
 exports.PartyController = PartyController;
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: party_item_dto_js_1.PartyItemDto, whitelist: true }))),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: party_item_dto_js_1.PartyItemDto, whitelist: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], PartyController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pull_parties_query_dto_js_1.PullPartiesQueryDto]),
+    __metadata("design:paramtypes", [Object, pull_parties_query_dto_js_1.PullPartiesQueryDto]),
     __metadata("design:returntype", Promise)
 ], PartyController.prototype, "pull", null);
 exports.PartyController = PartyController = __decorate([

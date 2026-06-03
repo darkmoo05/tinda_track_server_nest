@@ -49,6 +49,7 @@ model Charge {
   id                  String   @id @default(uuid())
   syncId              String   @unique
   deviceId            String
+  userId              String?
   lowerBound          Float
   upperBound          Float
   chargeAmount        Float
@@ -56,9 +57,11 @@ model Charge {
   isDeleted           Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("charges")
 }
 
@@ -66,6 +69,7 @@ model Party {
   id            String   @id @default(uuid())
   syncId        String   @unique
   deviceId      String
+  userId        String?
   name          String
   accountNumber String
   entityId      String   @default("")
@@ -75,9 +79,11 @@ model Party {
   isDeleted     Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("parties")
 }
 
@@ -85,15 +91,18 @@ model TransactionType {
   id           String   @id @default(uuid())
   syncId       String   @unique
   deviceId     String
+  userId       String?
   name         String
   isOutflow    Boolean  @default(false)
   walletAccount String  @default("GCash")
   isDeleted    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("transaction_types")
 }
 
@@ -101,13 +110,16 @@ model MovementCategory {
   id         String   @id @default(uuid())
   syncId     String   @unique
   deviceId   String
+  userId     String?
   name       String
   isDeleted  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("movement_categories")
 }
 
@@ -121,6 +133,7 @@ model FeeTransaction {
   id                       String   @id @default(uuid())
   syncId                   String   @unique
   deviceId                 String
+  userId                   String?
   relatedTransactionSyncId String?
   feeAmount                Float
   feeType                  String
@@ -128,9 +141,11 @@ model FeeTransaction {
   isDeleted                Boolean  @default(false)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+  user                     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("fee_transactions")
 }
 
@@ -139,6 +154,7 @@ model LedgerEntry {
   syncId            String   @unique
   transactionId     String?
   deviceId          String
+  userId            String?
   entryType         String
   title             String   @default("")
   note              String   @default("")
@@ -161,9 +177,11 @@ model LedgerEntry {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   transaction       Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  user              User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("ledger_entries")
 }
 
@@ -171,6 +189,7 @@ model Transaction {
   id                 String               @id @default(uuid())
   syncId             String?              @unique
   deviceId           String?
+  userId             String?
   walletProvider     WalletProvider
   direction          TransactionDirection
   amount             Float
@@ -198,9 +217,11 @@ model Transaction {
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   ledgerEntries      LedgerEntry[]
+  user               User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("transactions")
 }
 
@@ -209,11 +230,13 @@ model Transaction {
 // `description` and `examples` populate the in-app management UI; the
 // `isQuickAccess` flag pins up to 10 categories to the dashboard chip row.
 // Synced from device to server via POST /inventory/categories/push.
+// Now scoped per-user: each store manages their own categories.
 // ─────────────────────────────────────────────────────────────────────────────
 model ProductCategory {
   id            String    @id @default(uuid())
   syncId        String    @unique
-  name          String    @unique
+  userId        String?
+  name          String
   description   String?   @default("")
   examples      String?   @default("")
   isQuickAccess Boolean   @default(false)
@@ -221,8 +244,11 @@ model ProductCategory {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   products      Product[]
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, name])
   @@index([updatedAt])
+  @@index([userId])
   @@map("product_categories")
 }
 
@@ -232,11 +258,13 @@ model ProductCategory {
 // global IStorageProvider; the local Flutter cache keeps the original
 // `image_path` so the UI can show the picture even while offline.
 // Synced from device to server via POST /inventory/shelf-locations/push.
+// Now scoped per-user: each store manages their own shelf locations.
 // ─────────────────────────────────────────────────────────────────────────────
 model ShelfLocation {
   id          String    @id @default(uuid())
   syncId      String    @unique
-  name        String    @unique
+  userId      String?
+  name        String
   description String?   @default("")
   examples    String?   @default("")
   imageUrl    String?
@@ -244,8 +272,11 @@ model ShelfLocation {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   products    Product[]
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, name])
   @@index([updatedAt])
+  @@index([userId])
   @@map("shelf_locations")
 }
 
@@ -253,8 +284,9 @@ model Product {
   id                String           @id @default(uuid())
   syncId            String?          @unique
   deviceId          String?
+  userId            String?
   name              String
-  sku               String           @unique
+  sku               String
   description       String           @default("")
   // Denormalized name snapshot — always kept in sync with the relation.
   category          String           @default("General")
@@ -280,9 +312,12 @@ model Product {
   unitConversions   ProductUnitConversion[]
   saleItems         SaleItem[]
   stockMovements    StockMovement[]
+  user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, sku])
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("products")
 }
 
@@ -307,6 +342,7 @@ model ProductUnitConversion {
   id               String   @id @default(uuid())
   syncId           String   @unique
   productId        String
+  userId           String?
   unitName         String
   conversionFactor Float
   costPrice        Decimal  @db.Decimal(12, 2)
@@ -314,8 +350,11 @@ model ProductUnitConversion {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([productId])
+  @@index([updatedAt])
+  @@index([userId])
   @@map("product_unit_conversions")
 }
 
@@ -324,6 +363,7 @@ model Sale {
   syncId         String     @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   reference      String     @unique
   deviceId       String?
+  userId         String?
   note           String     @default("")
   subtotal       Float
   totalAmount    Float
@@ -334,9 +374,11 @@ model Sale {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   saleItems      SaleItem[]
+  user           User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("sales")
 }
 
@@ -362,6 +404,7 @@ model Customer {
   id          String        @id @default(uuid())
   syncId      String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   deviceId    String?
+  userId      String?
   name        String
   phone       String        @default("")
   address     String        @default("")
@@ -370,9 +413,11 @@ model Customer {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   utangRecords UtangRecord[]
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("customers")
 }
 
@@ -380,6 +425,7 @@ model UtangRecord {
   id          String    @id @default(uuid())
   syncId      String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   deviceId    String?
+  userId      String?
   customerId  String
   description String    @default("")
   amount      Float
@@ -387,10 +433,12 @@ model UtangRecord {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt @default(now())
   customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([customerId, createdAt])
   @@index([updatedAt])
   @@index([deviceId])
+  @@index([userId])
   @@map("utang_records")
 }
 
@@ -407,5 +455,29 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Per-user data isolation — all store data belongs to the user who created it
+  charges              Charge[]
+  parties              Party[]
+  transactionTypes     TransactionType[]
+  movementCategories   MovementCategory[]
+  feeTransactions      FeeTransaction[]
+  ledgerEntries        LedgerEntry[]
+  transactions         Transaction[]
+  productCategories    ProductCategory[]
+  shelfLocations       ShelfLocation[]
+  products             Product[]
+  productUnitConversions ProductUnitConversion[]
+  sales                Sale[]
+  customers            Customer[]
+  utangRecords         UtangRecord[]
+
   @@map("users")
+}
+
+model DeviceSync {
+  deviceId     String   @id
+  lastSyncedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("device_syncs")
 }

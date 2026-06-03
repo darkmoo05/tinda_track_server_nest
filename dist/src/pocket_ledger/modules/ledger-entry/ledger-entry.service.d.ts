@@ -6,6 +6,6 @@ export declare class LedgerEntryService {
     private readonly prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    push(records: LedgerEntryItemDto[]): Promise<number>;
-    pull(query: PullLedgerEntriesQueryDto): Promise<LedgerEntry[]>;
+    push(userId: string, records: LedgerEntryItemDto[]): Promise<number>;
+    pull(userId: string, query: PullLedgerEntriesQueryDto): Promise<LedgerEntry[]>;
 }

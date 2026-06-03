@@ -16,36 +16,36 @@ exports.ProductUnitConversionsController = void 0;
 const common_1 = require("@nestjs/common");
 const inventory_service_js_1 = require("./inventory.service.js");
 const push_product_unit_conversions_dto_js_1 = require("./dto/push-product-unit-conversions.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let ProductUnitConversionsController = class ProductUnitConversionsController {
     inventoryService;
     constructor(inventoryService) {
         this.inventoryService = inventoryService;
     }
-    async push(body) {
-        const synced = await this.inventoryService.pushProductUnitConversions(body);
+    async push(user, body) {
+        const synced = await this.inventoryService.pushProductUnitConversions(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.inventoryService.pullProductUnitConversions(query);
+    async pull(user, query) {
+        const data = await this.inventoryService.pullProductUnitConversions(user.id, query);
         return { success: true, data };
     }
 };
 exports.ProductUnitConversionsController = ProductUnitConversionsController;
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], ProductUnitConversionsController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [push_product_unit_conversions_dto_js_1.PullProductUnitConversionsQueryDto]),
+    __metadata("design:paramtypes", [Object, push_product_unit_conversions_dto_js_1.PullProductUnitConversionsQueryDto]),
     __metadata("design:returntype", Promise)
 ], ProductUnitConversionsController.prototype, "pull", null);
 exports.ProductUnitConversionsController = ProductUnitConversionsController = __decorate([

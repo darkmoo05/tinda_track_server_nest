@@ -2,6 +2,7 @@ import { CustomersService } from './customers.service.js';
 import { CreateCustomerDto } from './dto/create-customer.dto.js';
 import { AddUtangDto, RecordPaymentDto } from './dto/utang.dto.js';
 import { PullCustomersQueryDto, PushCustomerDto } from './dto/sync.dto.js';
+import { type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 export declare class CustomersController {
     private readonly customersService;
     constructor(customersService: CustomersService);
@@ -9,11 +10,11 @@ export declare class CustomersController {
         success: boolean;
         data: unknown[];
     }>;
-    push(body: PushCustomerDto[]): Promise<{
+    push(user: AuthUser, body: PushCustomerDto[]): Promise<{
         success: boolean;
         synced: number;
     }>;
-    pull(query: PullCustomersQueryDto): Promise<{
+    pull(user: AuthUser, query: PullCustomersQueryDto): Promise<{
         success: boolean;
         data: unknown[];
     }>;

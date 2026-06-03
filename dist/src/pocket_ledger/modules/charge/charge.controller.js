@@ -17,37 +17,37 @@ const common_1 = require("@nestjs/common");
 const charge_service_js_1 = require("./charge.service.js");
 const push_charges_dto_js_1 = require("./dto/push-charges.dto.js");
 const pull_charges_query_dto_js_1 = require("./dto/pull-charges-query.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let ChargeController = class ChargeController {
     chargeService;
     constructor(chargeService) {
         this.chargeService = chargeService;
     }
-    async push(body) {
-        const synced = await this.chargeService.push(body);
+    async push(user, body) {
+        const synced = await this.chargeService.push(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.chargeService.pull(query);
+    async pull(user, query) {
+        const data = await this.chargeService.pull(user.id, query);
         return { success: true, data };
     }
 };
 exports.ChargeController = ChargeController;
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: push_charges_dto_js_1.ChargeItemDto, whitelist: true }))),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: push_charges_dto_js_1.ChargeItemDto, whitelist: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], ChargeController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pull_charges_query_dto_js_1.PullChargesQueryDto]),
+    __metadata("design:paramtypes", [Object, pull_charges_query_dto_js_1.PullChargesQueryDto]),
     __metadata("design:returntype", Promise)
 ], ChargeController.prototype, "pull", null);
 exports.ChargeController = ChargeController = __decorate([

@@ -1,25 +1,26 @@
 import { InventoryService } from './inventory.service.js';
 import { ShelfLocationRecordDto } from './dto/push-shelf-locations.dto.js';
+import { type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 export declare class ShelfLocationsController {
     private readonly inventoryService;
     constructor(inventoryService: InventoryService);
-    list(): Promise<{
+    list(user: AuthUser): Promise<{
         success: boolean;
         data: unknown[];
     }>;
-    push(body: ShelfLocationRecordDto[]): Promise<{
+    push(user: AuthUser, body: ShelfLocationRecordDto[]): Promise<{
         success: boolean;
         data: unknown[];
     }>;
-    pull(since: string, _deviceId?: string): Promise<{
+    pull(user: AuthUser, since: string, _deviceId?: string): Promise<{
         success: boolean;
         data: unknown[];
     }>;
-    uploadImage(id: string, file: Express.Multer.File): Promise<{
+    uploadImage(user: AuthUser, id: string, file: Express.Multer.File): Promise<{
         success: boolean;
         data: unknown;
     }>;
-    remove(id: string): Promise<{
+    remove(user: AuthUser, id: string): Promise<{
         success: boolean;
         data: unknown;
     }>;

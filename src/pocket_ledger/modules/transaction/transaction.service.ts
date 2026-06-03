@@ -16,7 +16,7 @@ export class TransactionService {
     private readonly receiptOcrService: ReceiptOcrService,
   ) {}
 
-  async create(dto: CreateTransactionDto, receiptFile?: Express.Multer.File): Promise<Transaction> {
+  async create(userId: string, dto: CreateTransactionDto, receiptFile?: Express.Multer.File): Promise<Transaction> {
     const ocrResult = receiptFile
       ? await this.receiptOcrService.extractAmount(receiptFile.path)
       : { amount: null, rawText: '', confidence: null, status: 'FAILED' as const };
@@ -39,6 +39,7 @@ export class TransactionService {
     const resolvedTypeKey =
       dto.transactionTypeKey ?? this.buildTransactionTypeKey(dto.walletProvider, dto.direction);
     const chargeRule = await this.chargeService.findApplicableCharge(
+      userId,
       resolvedAmount,
       resolvedTypeKey,
     );
@@ -50,7 +51,7 @@ export class TransactionService {
     return this.prisma.$transaction(async (client) => {
       // Compute balanceBefore inside transaction to prevent races
       const sums = await client.ledgerEntry.aggregate({
-        where: { isDeleted: false },
+        where: { userId, isDeleted: false },
         _sum: {
           walletDelta: true,
           mayaWalletDelta: true,
@@ -82,6 +83,7 @@ export class TransactionService {
 
       const transaction = await client.transaction.create({
         data: {
+          userId,
           syncId: dto.syncId,
           deviceId: dto.deviceId,
           walletProvider: dto.walletProvider,
@@ -113,6 +115,7 @@ export class TransactionService {
 
       await client.ledgerEntry.create({
         data: {
+          userId,
           syncId: `${transaction.id}-ledger-${randomUUID()}`,
           transactionId: transaction.id,
           deviceId: dto.deviceId ?? 'server',
@@ -140,9 +143,10 @@ export class TransactionService {
     });
   }
 
-  async list(query: ListTransactionsQueryDto): Promise<Transaction[]> {
+  async list(userId: string, query: ListTransactionsQueryDto): Promise<Transaction[]> {
     return this.prisma.transaction.findMany({
       where: {
+        userId,
         ...(query.walletProvider ? { walletProvider: query.walletProvider } : {}),
         ...(query.direction ? { direction: query.direction } : {}),
         ...(query.status ? { status: query.status as TransactionStatus } : {}),
@@ -153,6 +157,7 @@ export class TransactionService {
   }
 
   async preview(
+    userId: string,
     walletProvider: WalletProvider,
     direction: TransactionDirection,
     amount: number,
@@ -174,13 +179,14 @@ export class TransactionService {
     const resolvedTypeKey =
       transactionTypeKey ?? this.buildTransactionTypeKey(walletProvider, direction);
     const chargeRule = await this.chargeService.findApplicableCharge(
+      userId,
       amount,
       resolvedTypeKey,
     );
     const chargeAmount = chargeRule?.chargeAmount ?? 0;
 
     const movement = this.buildMovement(walletProvider, direction, amount, chargeAmount, chargeHandling, resolvedTypeKey);
-    const currentWalletBalance = await this.getWalletBalance(walletProvider);
+    const currentWalletBalance = await this.getWalletBalance(userId, walletProvider);
     const postTransactionWalletBalance = currentWalletBalance + movement.walletBalanceDelta;
 
     let feeRoutingExplanation: string;
@@ -215,9 +221,9 @@ export class TransactionService {
     return `${wallet}_${dir}`;
   }
 
-  private async getWalletBalance(walletProvider: WalletProvider): Promise<number> {
+  private async getWalletBalance(userId: string, walletProvider: WalletProvider): Promise<number> {
     const sums = await this.prisma.ledgerEntry.aggregate({
-      where: { isDeleted: false },
+      where: { userId, isDeleted: false },
       _sum: {
         walletDelta: true,
         mayaWalletDelta: true,

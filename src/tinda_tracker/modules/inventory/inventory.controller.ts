@@ -24,7 +24,7 @@ import {
   PullProductsQueryDto,
   PushProductDto,
 } from './dto/push-products.dto.js';
-import { Public } from '../../../modules/auth/decorators/public.decorator.js';
+import { CurrentUser, type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 
 const UPLOAD_DIR = './uploads/products';
 // Ensure the upload directory exists at module load time.
@@ -35,43 +35,50 @@ export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Post()
-  async create(@Body() body: CreateProductDto): Promise<{ success: boolean; data: unknown }> {
-    const data = await this.inventoryService.create(body);
+  async create(
+    @CurrentUser() user: AuthUser,
+    @Body() body: CreateProductDto,
+  ): Promise<{ success: boolean; data: unknown }> {
+    const data = await this.inventoryService.create(user.id, body);
     return { success: true, data };
   }
 
   @Get()
-  async list(@Query() query: ListProductsQueryDto): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.inventoryService.list(query);
+  async list(
+    @CurrentUser() user: AuthUser,
+    @Query() query: ListProductsQueryDto,
+  ): Promise<{ success: boolean; data: unknown[] }> {
+    const data = await this.inventoryService.list(user.id, query);
     return { success: true, data };
   }
 
   /** Bulk upsert from the Flutter sync service. */
-  @Public()
   @Post('push')
   async push(
+    @CurrentUser() user: AuthUser,
     @Body() body: PushProductDto[],
   ): Promise<{ success: boolean; synced: number }> {
-    const synced = await this.inventoryService.pushProducts(body);
+    const synced = await this.inventoryService.pushProducts(user.id, body);
     return { success: true, synced };
   }
 
   /** Pull — returns all products updated since [since] ms; excludes own deviceId. */
-  @Public()
   @Get('pull')
   async pull(
+    @CurrentUser() user: AuthUser,
     @Query() query: PullProductsQueryDto,
   ): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.inventoryService.pullProducts(query);
+    const data = await this.inventoryService.pullProducts(user.id, query);
     return { success: true, data };
   }
 
   @Patch(':id')
   async update(
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: UpdateProductDto,
   ): Promise<{ success: boolean; data: unknown }> {
-    const data = await this.inventoryService.update(id, body);
+    const data = await this.inventoryService.update(user.id, id, body);
     return { success: true, data };
   }
 
@@ -106,34 +113,40 @@ export class InventoryController {
     }),
   )
   async uploadImage(
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<{ success: boolean; data: unknown }> {
     if (!file) throw new BadRequestException('No file provided');
-    const data = await this.inventoryService.updateImage(id, file);
+    const data = await this.inventoryService.updateImage(user.id, id, file);
     return { success: true, data };
   }
 
   @Post(':id/adjust-stock')
   async adjustStock(
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: AdjustStockDto,
   ): Promise<{ success: boolean; data: unknown }> {
-    const data = await this.inventoryService.adjustStock(id, body);
+    const data = await this.inventoryService.adjustStock(user.id, id, body);
     return { success: true, data };
   }
 
   @Get(':id/movements')
   async getMovements(
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
   ): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.inventoryService.getMovements(id);
+    const data = await this.inventoryService.getMovements(user.id, id);
     return { success: true, data };
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<{ success: boolean; data: unknown }> {
-    const data = await this.inventoryService.remove(id);
+  async remove(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; data: unknown }> {
+    const data = await this.inventoryService.remove(user.id, id);
     return { success: true, data };
   }
 }

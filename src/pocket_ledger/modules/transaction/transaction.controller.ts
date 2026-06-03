@@ -6,20 +6,28 @@ import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto.js';
 import { TransactionPreviewQueryDto, TransactionPreviewResponseDto } from './dto/transaction-preview.dto.js';
 import { receiptFileFilter, receiptStorage } from './receipt-upload.storage.js';
 import { TransactionService } from './transaction.service.js';
+import { CurrentUser, type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 
 @Controller('transactions')
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
 
   @Get()
-  async list(@Query() query: ListTransactionsQueryDto): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.transactionService.list(query);
+  async list(
+    @CurrentUser() user: AuthUser,
+    @Query() query: ListTransactionsQueryDto,
+  ): Promise<{ success: boolean; data: unknown[] }> {
+    const data = await this.transactionService.list(user.id, query);
     return { success: true, data };
   }
 
   @Get('preview')
-  async preview(@Query() query: TransactionPreviewQueryDto): Promise<{ success: boolean; data: TransactionPreviewResponseDto }> {
+  async preview(
+    @CurrentUser() user: AuthUser,
+    @Query() query: TransactionPreviewQueryDto,
+  ): Promise<{ success: boolean; data: TransactionPreviewResponseDto }> {
     const data = await this.transactionService.preview(
+      user.id,
       query.walletProvider,
       query.direction,
       query.amount,
@@ -32,9 +40,10 @@ export class TransactionController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createManual(
+    @CurrentUser() user: AuthUser,
     @Body() body: CreateManualTransactionDto,
   ): Promise<{ success: boolean; data: unknown }> {
-    const data = await this.transactionService.create(body);
+    const data = await this.transactionService.create(user.id, body);
     return { success: true, data };
   }
 
@@ -48,6 +57,7 @@ export class TransactionController {
     }),
   )
   async createFromReceipt(
+    @CurrentUser() user: AuthUser,
     @UploadedFile(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/i })
@@ -56,7 +66,8 @@ export class TransactionController {
     receipt: Express.Multer.File,
     @Body() body: CreateTransactionDto,
   ): Promise<{ success: boolean; data: unknown }> {
-    const data = await this.transactionService.create(body, receipt);
+    const data = await this.transactionService.create(user.id, body, receipt);
     return { success: true, data };
   }
 }
+

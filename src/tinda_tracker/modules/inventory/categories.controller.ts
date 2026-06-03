@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { InventoryService } from './inventory.service.js';
 import { CategoryRecordDto } from './dto/push-categories.dto.js';
-import { Public } from '../../../modules/auth/decorators/public.decorator.js';
+import { CurrentUser, type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 
 @Controller('inventory/categories')
 export class CategoriesController {
@@ -14,12 +14,12 @@ export class CategoriesController {
   }
 
   /** Bulk upsert — called by the Flutter sync service. */
-  @Public()
   @Post('push')
   async push(
+    @CurrentUser() user: AuthUser,
     @Body() body: CategoryRecordDto[],
   ): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.inventoryService.pushCategories(body);
+    const data = await this.inventoryService.pushCategories(user.id, body);
     return { success: true, data };
   }
 
@@ -27,14 +27,14 @@ export class CategoriesController {
    * Pull — returns all categories updated since [since] milliseconds epoch.
    * Called by the Flutter sync service to receive server-side changes.
    */
-  @Public()
   @Get('pull')
   async pull(
+    @CurrentUser() user: AuthUser,
     @Query('since') since: string,
     @Query('deviceId') _deviceId?: string,
   ): Promise<{ success: boolean; data: unknown[] }> {
     const sinceMs = parseInt(since ?? '0', 10);
-    const data = await this.inventoryService.pullCategories(sinceMs);
+    const data = await this.inventoryService.pullCategories(user.id, sinceMs);
     return { success: true, data };
   }
 

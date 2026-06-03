@@ -19,10 +19,11 @@ let ChargeService = ChargeService_1 = class ChargeService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async push(records) {
+    async push(userId, records) {
         await Promise.all(records.map((r) => this.prisma.charge.upsert({
             where: { syncId: r.syncId },
             create: {
+                userId,
                 syncId: r.syncId,
                 deviceId: r.deviceId,
                 lowerBound: r.lowerBound,
@@ -32,6 +33,7 @@ let ChargeService = ChargeService_1 = class ChargeService {
                 isDeleted: r.isDeleted ?? false,
             },
             update: {
+                userId,
                 deviceId: r.deviceId,
                 lowerBound: r.lowerBound,
                 upperBound: r.upperBound,
@@ -43,23 +45,25 @@ let ChargeService = ChargeService_1 = class ChargeService {
         this.logger.log(`Pushed ${records.length} charge(s)`);
         return records.length;
     }
-    async pull(query) {
+    async pull(userId, query) {
         const { since, deviceId } = query;
         const sinceMs = Number(since ?? '0');
         const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
         return this.prisma.charge.findMany({
             where: isIncrementalSync
                 ? {
+                    userId,
                     updatedAt: { gt: new Date(sinceMs) },
                     ...(deviceId ? { deviceId: { not: deviceId } } : {}),
                 }
-                : { isDeleted: false },
+                : { userId, isDeleted: false },
             orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
         });
     }
-    async findApplicableCharge(amount, transactionTypeKey) {
+    async findApplicableCharge(userId, amount, transactionTypeKey) {
         return this.prisma.charge.findFirst({
             where: {
+                userId,
                 isDeleted: false,
                 lowerBound: { lte: amount },
                 upperBound: { gte: amount },

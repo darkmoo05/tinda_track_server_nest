@@ -20,49 +20,53 @@ const list_transactions_query_dto_js_1 = require("./dto/list-transactions-query.
 const transaction_preview_dto_js_1 = require("./dto/transaction-preview.dto.js");
 const receipt_upload_storage_js_1 = require("./receipt-upload.storage.js");
 const transaction_service_js_1 = require("./transaction.service.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let TransactionController = class TransactionController {
     transactionService;
     constructor(transactionService) {
         this.transactionService = transactionService;
     }
-    async list(query) {
-        const data = await this.transactionService.list(query);
+    async list(user, query) {
+        const data = await this.transactionService.list(user.id, query);
         return { success: true, data };
     }
-    async preview(query) {
-        const data = await this.transactionService.preview(query.walletProvider, query.direction, query.amount, query.chargeHandling ?? 'addOnTop', query.transactionTypeKey);
+    async preview(user, query) {
+        const data = await this.transactionService.preview(user.id, query.walletProvider, query.direction, query.amount, query.chargeHandling ?? 'addOnTop', query.transactionTypeKey);
         return { success: true, data };
     }
-    async createManual(body) {
-        const data = await this.transactionService.create(body);
+    async createManual(user, body) {
+        const data = await this.transactionService.create(user.id, body);
         return { success: true, data };
     }
-    async createFromReceipt(receipt, body) {
-        const data = await this.transactionService.create(body, receipt);
+    async createFromReceipt(user, receipt, body) {
+        const data = await this.transactionService.create(user.id, body, receipt);
         return { success: true, data };
     }
 };
 exports.TransactionController = TransactionController;
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [list_transactions_query_dto_js_1.ListTransactionsQueryDto]),
+    __metadata("design:paramtypes", [Object, list_transactions_query_dto_js_1.ListTransactionsQueryDto]),
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "list", null);
 __decorate([
     (0, common_1.Get)('preview'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [transaction_preview_dto_js_1.TransactionPreviewQueryDto]),
+    __metadata("design:paramtypes", [Object, transaction_preview_dto_js_1.TransactionPreviewQueryDto]),
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "preview", null);
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_transaction_dto_js_1.CreateManualTransactionDto]),
+    __metadata("design:paramtypes", [Object, create_transaction_dto_js_1.CreateManualTransactionDto]),
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "createManual", null);
 __decorate([
@@ -73,12 +77,13 @@ __decorate([
         fileFilter: receipt_upload_storage_js_1.receiptFileFilter,
         limits: { fileSize: 5 * 1024 * 1024 },
     })),
-    __param(0, (0, common_1.UploadedFile)(new common_1.ParseFilePipeBuilder()
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.UploadedFile)(new common_1.ParseFilePipeBuilder()
         .addFileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/i })
         .build({ fileIsRequired: true }))),
-    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, create_transaction_dto_js_1.CreateTransactionDto]),
+    __metadata("design:paramtypes", [Object, Object, create_transaction_dto_js_1.CreateTransactionDto]),
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "createFromReceipt", null);
 exports.TransactionController = TransactionController = __decorate([

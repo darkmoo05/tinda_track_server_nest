@@ -16,25 +16,25 @@ exports.SyncController = void 0;
 const common_1 = require("@nestjs/common");
 const sync_service_js_1 = require("./sync.service.js");
 const sync_dto_js_1 = require("./dto/sync.dto.js");
-const public_decorator_js_1 = require("../auth/decorators/public.decorator.js");
 let SyncController = class SyncController {
     syncService;
     constructor(syncService) {
         this.syncService = syncService;
     }
-    async sync(body) {
+    async sync(req, body) {
+        const userId = req.user.id;
         const pushData = body.push ?? {};
-        return this.syncService.pushAndPull(body.deviceId, body.lastSync, pushData);
+        return this.syncService.pushAndPull(body.deviceId, userId, body.lastSync, pushData);
     }
 };
 exports.SyncController = SyncController;
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [sync_dto_js_1.SyncRequestDto]),
+    __metadata("design:paramtypes", [Object, sync_dto_js_1.SyncRequestDto]),
     __metadata("design:returntype", Promise)
 ], SyncController.prototype, "sync", null);
 exports.SyncController = SyncController = __decorate([

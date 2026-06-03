@@ -10,12 +10,13 @@ export class LedgerEntryService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async push(records: LedgerEntryItemDto[]): Promise<number> {
+  async push(userId: string, records: LedgerEntryItemDto[]): Promise<number> {
     await Promise.all(
       records.map((record) =>
         this.prisma.ledgerEntry.upsert({
           where: { syncId: record.syncId },
           create: {
+            userId,
             syncId: record.syncId,
             deviceId: record.deviceId,
             entryType: record.entryType,
@@ -39,6 +40,7 @@ export class LedgerEntryService {
             isDeleted: record.isDeleted ?? false,
           },
           update: {
+            userId,
             deviceId: record.deviceId,
             entryType: record.entryType,
             title: record.title ?? '',
@@ -68,7 +70,7 @@ export class LedgerEntryService {
     return records.length;
   }
 
-  async pull(query: PullLedgerEntriesQueryDto): Promise<LedgerEntry[]> {
+  async pull(userId: string, query: PullLedgerEntriesQueryDto): Promise<LedgerEntry[]> {
     const { since, deviceId } = query;
     const sinceMs = Number(since ?? '0');
     const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
@@ -76,10 +78,11 @@ export class LedgerEntryService {
     return this.prisma.ledgerEntry.findMany({
       where: isIncrementalSync
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(deviceId ? { deviceId: { not: deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }

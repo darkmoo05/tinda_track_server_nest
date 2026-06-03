@@ -17,37 +17,37 @@ const common_1 = require("@nestjs/common");
 const movement_category_service_js_1 = require("./movement-category.service.js");
 const movement_category_item_dto_js_1 = require("./dto/movement-category-item.dto.js");
 const pull_movement_categories_query_dto_js_1 = require("./dto/pull-movement-categories-query.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let MovementCategoryController = class MovementCategoryController {
     movementCategoryService;
     constructor(movementCategoryService) {
         this.movementCategoryService = movementCategoryService;
     }
-    async push(body) {
-        const synced = await this.movementCategoryService.push(body);
+    async push(user, body) {
+        const synced = await this.movementCategoryService.push(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.movementCategoryService.pull(query);
+    async pull(user, query) {
+        const data = await this.movementCategoryService.pull(user.id, query);
         return { success: true, data };
     }
 };
 exports.MovementCategoryController = MovementCategoryController;
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: movement_category_item_dto_js_1.MovementCategoryItemDto, whitelist: true }))),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)(new common_1.ParseArrayPipe({ items: movement_category_item_dto_js_1.MovementCategoryItemDto, whitelist: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], MovementCategoryController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pull_movement_categories_query_dto_js_1.PullMovementCategoriesQueryDto]),
+    __metadata("design:paramtypes", [Object, pull_movement_categories_query_dto_js_1.PullMovementCategoriesQueryDto]),
     __metadata("design:returntype", Promise)
 ], MovementCategoryController.prototype, "pull", null);
 exports.MovementCategoryController = MovementCategoryController = __decorate([

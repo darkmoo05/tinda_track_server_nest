@@ -5,12 +5,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
 const core_1 = require("@nestjs/core");
+const nestjs_pino_1 = require("nestjs-pino");
+const joi_1 = __importDefault(require("joi"));
 const prisma_module_js_1 = require("./prisma/prisma.module.js");
 const logging_middleware_js_1 = require("./common/middleware/logging.middleware.js");
 const charge_module_js_1 = require("./pocket_ledger/modules/charge/charge.module.js");
@@ -38,12 +43,35 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            config_1.ConfigModule.forRoot({ isGlobal: true }),
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+                validationSchema: joi_1.default.object({
+                    DATABASE_URL: joi_1.default.string().required(),
+                    JWT_SECRET: joi_1.default.string().required(),
+                    PORT: joi_1.default.number().default(8080),
+                    THROTTLER_TTL: joi_1.default.number().default(60000),
+                    THROTTLER_LIMIT: joi_1.default.number().default(100),
+                }),
+            }),
+            nestjs_pino_1.LoggerModule.forRoot({
+                pinoHttp: {
+                    level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+                    transport: process.env.NODE_ENV !== 'production'
+                        ? { target: 'pino-pretty', options: { colorize: true } }
+                        : undefined,
+                },
+            }),
             prisma_module_js_1.PrismaModule,
-            throttler_1.ThrottlerModule.forRoot([{
-                    ttl: 60000,
-                    limit: 100,
-                }]),
+            throttler_1.ThrottlerModule.forRootAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: (config) => [
+                    {
+                        ttl: config.get('THROTTLER_TTL') ?? 60000,
+                        limit: config.get('THROTTLER_LIMIT') ?? 100,
+                    },
+                ],
+            }),
             auth_module_js_1.AuthModule,
             sync_module_js_1.SyncModule,
             health_module_js_1.HealthModule,

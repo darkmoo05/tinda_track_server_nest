@@ -10,12 +10,13 @@ export class PartyService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async push(records: PartyItemDto[]): Promise<number> {
+  async push(userId: string, records: PartyItemDto[]): Promise<number> {
     await Promise.all(
       records.map((record) =>
         this.prisma.party.upsert({
           where: { syncId: record.syncId },
           create: {
+            userId,
             syncId: record.syncId,
             deviceId: record.deviceId,
             name: record.name,
@@ -27,6 +28,7 @@ export class PartyService {
             isDeleted: record.isDeleted ?? false,
           },
           update: {
+            userId,
             deviceId: record.deviceId,
             name: record.name,
             accountNumber: record.accountNumber,
@@ -44,7 +46,7 @@ export class PartyService {
     return records.length;
   }
 
-  async pull(query: PullPartiesQueryDto): Promise<Party[]> {
+  async pull(userId: string, query: PullPartiesQueryDto): Promise<Party[]> {
     const { since, deviceId } = query;
     const sinceMs = Number(since ?? '0');
     const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
@@ -52,10 +54,11 @@ export class PartyService {
     return this.prisma.party.findMany({
       where: isIncrementalSync
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(deviceId ? { deviceId: { not: deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }

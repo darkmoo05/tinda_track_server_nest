@@ -4,7 +4,7 @@ export declare class SyncService {
     private readonly prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    pushAndPull(deviceId: string, lastSync: number | undefined, push: SyncPushDto): Promise<{
+    pushAndPull(deviceId: string, userId: string, lastSync: number | undefined, push: SyncPushDto): Promise<{
         success: boolean;
         timestamp: number;
         pull: {

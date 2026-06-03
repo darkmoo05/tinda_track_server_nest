@@ -5,10 +5,10 @@ import { PrismaService } from '../../../prisma/prisma.service.js';
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getDashboard() {
+  async getDashboard(userId: string) {
     const [totals, recentEntries] = await Promise.all([
       this.prisma.ledgerEntry.aggregate({
-        where: { isDeleted: false },
+        where: { userId, isDeleted: false },
         _sum: {
           walletDelta: true,
           mayaWalletDelta: true,
@@ -17,11 +17,12 @@ export class DashboardService {
         },
       }),
       this.prisma.ledgerEntry.findMany({
-        where: { isDeleted: false },
+        where: { userId, isDeleted: false },
         orderBy: { createdAt: 'desc' },
         take: 20,
       }),
     ]);
+
 
     return {
       gcashBalance: totals._sum.walletDelta ?? 0,

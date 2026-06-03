@@ -6,6 +6,6 @@ export declare class MovementCategoryService {
     private readonly prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    push(records: MovementCategoryItemDto[]): Promise<number>;
-    pull(query: PullMovementCategoriesQueryDto): Promise<MovementCategory[]>;
+    push(userId: string, records: MovementCategoryItemDto[]): Promise<number>;
+    pull(userId: string, query: PullMovementCategoriesQueryDto): Promise<MovementCategory[]>;
 }

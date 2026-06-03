@@ -18,7 +18,7 @@ const customers_service_js_1 = require("./customers.service.js");
 const create_customer_dto_js_1 = require("./dto/create-customer.dto.js");
 const utang_dto_js_1 = require("./dto/utang.dto.js");
 const sync_dto_js_1 = require("./dto/sync.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let CustomersController = class CustomersController {
     customersService;
     constructor(customersService) {
@@ -28,12 +28,12 @@ let CustomersController = class CustomersController {
         const data = await this.customersService.list();
         return { success: true, data };
     }
-    async push(body) {
-        const synced = await this.customersService.pushCustomers(body);
+    async push(user, body) {
+        const synced = await this.customersService.pushCustomers(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.customersService.pullCustomers(query);
+    async pull(user, query) {
+        const data = await this.customersService.pullCustomers(user.id, query);
         return { success: true, data };
     }
     async findOne(id) {
@@ -65,19 +65,19 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "list", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [sync_dto_js_1.PullCustomersQueryDto]),
+    __metadata("design:paramtypes", [Object, sync_dto_js_1.PullCustomersQueryDto]),
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "pull", null);
 __decorate([

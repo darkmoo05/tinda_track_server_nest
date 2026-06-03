@@ -6,6 +6,6 @@ export declare class FeeTransactionService {
     private readonly prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    push(records: FeeTransactionItemDto[]): Promise<number>;
-    pull(query: PullFeeTransactionsQueryDto): Promise<FeeTransaction[]>;
+    push(userId: string, records: FeeTransactionItemDto[]): Promise<number>;
+    pull(userId: string, query: PullFeeTransactionsQueryDto): Promise<FeeTransaction[]>;
 }

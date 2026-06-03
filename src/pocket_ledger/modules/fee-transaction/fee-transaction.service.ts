@@ -14,12 +14,13 @@ export class FeeTransactionService {
    * Bulk-upsert fee transactions from a device.
    * Each record is matched by syncId (idempotent).
    */
-  async push(records: FeeTransactionItemDto[]): Promise<number> {
+  async push(userId: string, records: FeeTransactionItemDto[]): Promise<number> {
     await Promise.all(
       records.map((r) =>
         this.prisma.feeTransaction.upsert({
           where: { syncId: r.syncId },
           create: {
+            userId,
             syncId: r.syncId,
             deviceId: r.deviceId,
             relatedTransactionSyncId: r.relatedTransactionSyncId ?? null,
@@ -29,6 +30,7 @@ export class FeeTransactionService {
             isDeleted: r.isDeleted ?? false,
           },
           update: {
+            userId,
             deviceId: r.deviceId,
             relatedTransactionSyncId: r.relatedTransactionSyncId ?? null,
             feeAmount: r.feeAmount,
@@ -48,7 +50,7 @@ export class FeeTransactionService {
    * Return fee transactions updated after `since` that did not originate from
    * `deviceId`. Supports incremental sync from offline clients.
    */
-  async pull(query: PullFeeTransactionsQueryDto): Promise<FeeTransaction[]> {
+  async pull(userId: string, query: PullFeeTransactionsQueryDto): Promise<FeeTransaction[]> {
     const { since, deviceId } = query;
     const sinceMs = Number(since ?? '0');
     const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
@@ -56,10 +58,11 @@ export class FeeTransactionService {
     return this.prisma.feeTransaction.findMany({
       where: isIncrementalSync
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(deviceId ? { deviceId: { not: deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }

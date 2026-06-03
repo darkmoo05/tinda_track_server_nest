@@ -18,6 +18,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private readonly _pool: Pool;
 
   constructor(private readonly config: ConfigService) {
+    const self = this;
     const connectionString = config.getOrThrow<string>('DATABASE_URL');
     this._pool = new Pool({ connectionString });
     const adapter = new PrismaPg(this._pool);
@@ -62,24 +63,16 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
             // 2. Intercept hard delete and convert to soft delete
             if (isSoftDeleteModel && operation === 'delete') {
-              return (query as any)({
-                ...args,
-                operation: 'update',
-                args: {
-                  ...args,
-                  data: { isDeleted: true },
-                },
+              return (self as any)._extendedClient[model].update({
+                where: args.where,
+                data: { isDeleted: true },
               });
             }
 
             if (isSoftDeleteModel && operation === 'deleteMany') {
-              return (query as any)({
-                ...args,
-                operation: 'updateMany',
-                args: {
-                  ...args,
-                  data: { isDeleted: true },
-                },
+              return (self as any)._extendedClient[model].updateMany({
+                where: args.where,
+                data: { isDeleted: true },
               });
             }
 

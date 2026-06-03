@@ -13,7 +13,7 @@ import {
 import { ChargeService } from './charge.service.js';
 import { ChargeItemDto } from './dto/push-charges.dto.js';
 import { PullChargesQueryDto } from './dto/pull-charges-query.dto.js';
-import { Public } from '../../../modules/auth/decorators/public.decorator.js';
+import { CurrentUser, type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 
 /**
  * ChargeController mirrors the Express routes exactly:
@@ -34,13 +34,13 @@ export class ChargeController {
    * Accepts a raw array of charge objects (same shape the Flutter client sends).
    * Returns { success, synced } to keep parity with the Express response.
    */
-  @Public()
   @Post('push')
   @HttpCode(HttpStatus.OK)
   async push(
+    @CurrentUser() user: AuthUser,
     @Body(new ParseArrayPipe({ items: ChargeItemDto, whitelist: true })) body: ChargeItemDto[],
   ): Promise<{ success: boolean; synced: number }> {
-    const synced = await this.chargeService.push(body);
+    const synced = await this.chargeService.push(user.id, body);
     return { success: true, synced };
   }
 
@@ -49,12 +49,12 @@ export class ChargeController {
    *
    * Returns charges updated after `since` that originated from a different device.
    */
-  @Public()
   @Get('pull')
   async pull(
+    @CurrentUser() user: AuthUser,
     @Query() query: PullChargesQueryDto,
   ): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.chargeService.pull(query);
+    const data = await this.chargeService.pull(user.id, query);
     return { success: true, data };
   }
 }

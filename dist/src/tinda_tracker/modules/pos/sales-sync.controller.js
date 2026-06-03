@@ -16,36 +16,36 @@ exports.SalesSyncController = void 0;
 const common_1 = require("@nestjs/common");
 const pos_service_js_1 = require("./pos.service.js");
 const push_sales_dto_js_1 = require("./dto/push-sales.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let SalesSyncController = class SalesSyncController {
     posService;
     constructor(posService) {
         this.posService = posService;
     }
-    async push(body) {
-        const synced = await this.posService.pushSales(body);
+    async push(user, body) {
+        const synced = await this.posService.pushSales(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.posService.pullSales(query);
+    async pull(user, query) {
+        const data = await this.posService.pullSales(user.id, query);
         return { success: true, data };
     }
 };
 exports.SalesSyncController = SalesSyncController;
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], SalesSyncController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [push_sales_dto_js_1.PullSalesQueryDto]),
+    __metadata("design:paramtypes", [Object, push_sales_dto_js_1.PullSalesQueryDto]),
     __metadata("design:returntype", Promise)
 ], SalesSyncController.prototype, "pull", null);
 exports.SalesSyncController = SalesSyncController = __decorate([

@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CategoriesController = void 0;
 const common_1 = require("@nestjs/common");
 const inventory_service_js_1 = require("./inventory.service.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let CategoriesController = class CategoriesController {
     inventoryService;
     constructor(inventoryService) {
@@ -25,13 +25,13 @@ let CategoriesController = class CategoriesController {
         const data = await this.inventoryService.listCategories();
         return { success: true, data };
     }
-    async push(body) {
-        const data = await this.inventoryService.pushCategories(body);
+    async push(user, body) {
+        const data = await this.inventoryService.pushCategories(user.id, body);
         return { success: true, data };
     }
-    async pull(since, _deviceId) {
+    async pull(user, since, _deviceId) {
         const sinceMs = parseInt(since ?? '0', 10);
-        const data = await this.inventoryService.pullCategories(sinceMs);
+        const data = await this.inventoryService.pullCategories(user.id, sinceMs);
         return { success: true, data };
     }
     async remove(id) {
@@ -47,20 +47,20 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CategoriesController.prototype, "list", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], CategoriesController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)('since')),
-    __param(1, (0, common_1.Query)('deviceId')),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('since')),
+    __param(2, (0, common_1.Query)('deviceId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], CategoriesController.prototype, "pull", null);
 __decorate([

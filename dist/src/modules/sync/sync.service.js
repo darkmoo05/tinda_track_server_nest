@@ -20,47 +20,63 @@ let SyncService = SyncService_1 = class SyncService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async pushAndPull(deviceId, lastSync, push) {
+    async pushAndPull(deviceId, userId, lastSync, push) {
         const isIncremental = lastSync !== undefined && lastSync > 0;
         const sinceDate = isIncremental ? new Date(lastSync) : new Date(0);
         const serverTimestamp = Date.now();
         const pullWhere = (hasDeviceId, hasIsDeleted) => {
             if (isIncremental) {
                 return {
+                    userId,
                     updatedAt: { gt: sinceDate },
                     ...(hasDeviceId && deviceId ? { deviceId: { not: deviceId } } : {}),
                     ...(hasIsDeleted ? { isDeleted: { in: [true, false] } } : {}),
                 };
             }
-            else {
-                return {
-                    ...(hasIsDeleted ? { isDeleted: false } : {}),
-                };
-            }
+            return {
+                userId,
+                ...(hasIsDeleted ? { isDeleted: false } : {}),
+            };
         };
         await this.prisma.$transaction(async (tx) => {
+            await tx.deviceSync.upsert({
+                where: { deviceId },
+                update: { lastSyncedAt: new Date(serverTimestamp) },
+                create: { deviceId, lastSyncedAt: new Date(serverTimestamp) },
+            });
             if (push.productCategories) {
                 for (const r of push.productCategories) {
-                    let existing = await tx.productCategory.findUnique({ where: { syncId: r.syncId } });
-                    existing ??= await tx.productCategory.findUnique({ where: { name: r.name } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let existing = await tx.productCategory.findUnique({
+                        where: { syncId: r.syncId },
+                    });
+                    if (!existing) {
+                        existing = await tx.productCategory.findUnique({
+                            where: { userId_name: { userId, name: r.name } },
+                        });
+                    }
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+                        this.logger.warn(`Sync conflict: ProductCategory (syncId: ${r.syncId}) from device ` +
+                            `${deviceId} rejected — server record is newer.`);
                         continue;
                     }
                     if (r.isQuickAccess && !r.isDeleted) {
                         const count = await tx.productCategory.count({
                             where: {
+                                userId,
                                 isQuickAccess: true,
                                 isDeleted: false,
                                 syncId: { not: r.syncId },
-                                name: { not: r.name },
                             },
                         });
-                        if (count >= 10) {
+                        if (count >= 10)
                             r.isQuickAccess = false;
-                        }
                     }
                     const data = {
+                        userId,
                         name: r.name,
                         description: r.description ?? '',
                         examples: r.examples ?? '',
@@ -82,13 +98,23 @@ let SyncService = SyncService_1 = class SyncService {
             }
             if (push.shelfLocations) {
                 for (const r of push.shelfLocations) {
-                    let existing = await tx.shelfLocation.findUnique({ where: { syncId: r.syncId } });
-                    existing ??= await tx.shelfLocation.findUnique({ where: { name: r.name } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let existing = await tx.shelfLocation.findUnique({
+                        where: { syncId: r.syncId },
+                    });
+                    if (!existing) {
+                        existing = await tx.shelfLocation.findUnique({
+                            where: { userId_name: { userId, name: r.name } },
+                        });
+                    }
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         name: r.name,
                         description: r.description ?? '',
                         examples: r.examples ?? '',
@@ -111,12 +137,23 @@ let SyncService = SyncService_1 = class SyncService {
             if (push.products) {
                 for (const r of push.products) {
                     let existing = await tx.product.findUnique({ where: { syncId: r.syncId } });
-                    existing ??= await tx.product.findUnique({ where: { sku: r.sku } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    existing ??= await tx.product.findUnique({
+                        where: {
+                            userId_sku: {
+                                userId,
+                                sku: r.sku,
+                            },
+                        },
+                    });
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId ?? null,
                         name: r.name,
                         sku: r.sku,
@@ -150,12 +187,18 @@ let SyncService = SyncService_1 = class SyncService {
             }
             if (push.productUnitConversions) {
                 for (const r of push.productUnitConversions) {
-                    const existing = await tx.productUnitConversion.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    const existing = await tx.productUnitConversion.findUnique({
+                        where: { syncId: r.syncId },
+                    });
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         productId: r.productId,
                         unitName: r.unitName,
                         conversionFactor: r.conversionFactor,
@@ -163,10 +206,7 @@ let SyncService = SyncService_1 = class SyncService {
                         sellingPrice: r.sellingPrice,
                     };
                     if (existing) {
-                        await tx.productUnitConversion.update({
-                            where: { id: existing.id },
-                            data,
-                        });
+                        await tx.productUnitConversion.update({ where: { id: existing.id }, data });
                     }
                     else {
                         await tx.productUnitConversion.create({
@@ -178,11 +218,15 @@ let SyncService = SyncService_1 = class SyncService {
             if (push.customers) {
                 for (const r of push.customers) {
                     const existing = await tx.customer.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId ?? null,
                         name: r.name,
                         phone: r.phone ?? '',
@@ -191,10 +235,7 @@ let SyncService = SyncService_1 = class SyncService {
                         isDeleted: r.isDeleted ?? false,
                     };
                     if (existing) {
-                        await tx.customer.update({
-                            where: { id: existing.id },
-                            data,
-                        });
+                        await tx.customer.update({ where: { id: existing.id }, data });
                     }
                     else {
                         await tx.customer.create({
@@ -206,11 +247,15 @@ let SyncService = SyncService_1 = class SyncService {
             if (push.utangRecords) {
                 for (const r of push.utangRecords) {
                     const existing = await tx.utangRecord.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId ?? null,
                         customerId: r.customerId,
                         description: r.description ?? '',
@@ -218,10 +263,7 @@ let SyncService = SyncService_1 = class SyncService {
                         isDeleted: r.isDeleted ?? false,
                     };
                     if (existing) {
-                        await tx.utangRecord.update({
-                            where: { id: existing.id },
-                            data,
-                        });
+                        await tx.utangRecord.update({ where: { id: existing.id }, data });
                     }
                     else {
                         await tx.utangRecord.create({
@@ -233,11 +275,15 @@ let SyncService = SyncService_1 = class SyncService {
             if (push.sales) {
                 for (const r of push.sales) {
                     const existing = await tx.sale.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const saleData = {
+                        userId,
                         reference: r.reference,
                         deviceId: r.deviceId ?? null,
                         note: r.note ?? '',
@@ -279,11 +325,15 @@ let SyncService = SyncService_1 = class SyncService {
             if (push.charges) {
                 for (const r of push.charges) {
                     const existing = await tx.charge.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId,
                         lowerBound: r.lowerBound,
                         upperBound: r.upperBound,
@@ -304,11 +354,15 @@ let SyncService = SyncService_1 = class SyncService {
             if (push.parties) {
                 for (const r of push.parties) {
                     const existing = await tx.party.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId,
                         name: r.name,
                         accountNumber: r.accountNumber,
@@ -330,12 +384,18 @@ let SyncService = SyncService_1 = class SyncService {
             }
             if (push.transactionTypes) {
                 for (const r of push.transactionTypes) {
-                    const existing = await tx.transactionType.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    const existing = await tx.transactionType.findUnique({
+                        where: { syncId: r.syncId },
+                    });
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId,
                         name: r.name,
                         isOutflow: r.isOutflow ?? false,
@@ -354,12 +414,18 @@ let SyncService = SyncService_1 = class SyncService {
             }
             if (push.movementCategories) {
                 for (const r of push.movementCategories) {
-                    const existing = await tx.movementCategory.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    const existing = await tx.movementCategory.findUnique({
+                        where: { syncId: r.syncId },
+                    });
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId,
                         name: r.name,
                         isDeleted: r.isDeleted ?? false,
@@ -376,12 +442,18 @@ let SyncService = SyncService_1 = class SyncService {
             }
             if (push.feeTransactions) {
                 for (const r of push.feeTransactions) {
-                    const existing = await tx.feeTransaction.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    const existing = await tx.feeTransaction.findUnique({
+                        where: { syncId: r.syncId },
+                    });
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId,
                         relatedTransactionSyncId: r.relatedTransactionSyncId ?? null,
                         feeAmount: r.feeAmount,
@@ -402,11 +474,15 @@ let SyncService = SyncService_1 = class SyncService {
             if (push.transactions) {
                 for (const r of push.transactions) {
                     const existing = await tx.transaction.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         deviceId: r.deviceId ?? null,
                         walletProvider: r.walletProvider,
                         direction: r.direction,
@@ -446,11 +522,15 @@ let SyncService = SyncService_1 = class SyncService {
             if (push.ledgerEntries) {
                 for (const r of push.ledgerEntries) {
                     const existing = await tx.ledgerEntry.findUnique({ where: { syncId: r.syncId } });
-                    const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
                     if (existing && existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
                         continue;
                     }
                     const data = {
+                        userId,
                         transactionId: r.transactionId ?? null,
                         deviceId: r.deviceId,
                         entryType: r.entryType,
@@ -484,7 +564,7 @@ let SyncService = SyncService_1 = class SyncService {
                 }
             }
         });
-        this.logger.log(`Completed transactional push for device: ${deviceId}`);
+        this.logger.log(`Push complete for device: ${deviceId}, user: ${userId}`);
         const pullData = await this.prisma.$transaction(async (tx) => {
             const productCategories = await tx.productCategory.findMany({
                 where: pullWhere(false, true),

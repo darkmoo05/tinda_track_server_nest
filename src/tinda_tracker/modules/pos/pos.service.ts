@@ -11,7 +11,7 @@ import { PullSalesQueryDto, PushSaleDto } from './dto/push-sales.dto.js';
 export class PosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async checkout(dto: CheckoutPosDto): Promise<Sale> {
+  async checkout(userId: string, dto: CheckoutPosDto): Promise<Sale> {
     if (dto.paidAmount < 0) {
       throw new BadRequestException('Paid amount must be zero or greater');
     }
@@ -20,10 +20,10 @@ export class PosService {
       const uniqueProductIds = [...new Set(dto.items.map((item) => item.productId))];
       const [products, conversions] = await Promise.all([
         client.product.findMany({
-          where: { id: { in: uniqueProductIds }, isDeleted: false, isActive: true },
+          where: { id: { in: uniqueProductIds }, userId, isDeleted: false, isActive: true },
         }),
         client.productUnitConversion.findMany({
-          where: { productId: { in: uniqueProductIds } },
+          where: { productId: { in: uniqueProductIds }, userId },
         }),
       ]);
 
@@ -126,6 +126,7 @@ export class PosService {
 
       const sale = await client.sale.create({
         data: {
+          userId,
           reference,
           deviceId: dto.deviceId,
           note: dto.note ?? '',
@@ -157,7 +158,7 @@ export class PosService {
 
         const previousQuantity = product.stockInBaseUnit;
         const updateResult = await client.product.updateMany({
-          where: { id: productId, stockInBaseUnit: { gte: deduction } },
+          where: { id: productId, userId, stockInBaseUnit: { gte: deduction } },
           data: { stockInBaseUnit: { decrement: deduction } },
         });
         if (updateResult.count === 0) {
@@ -187,6 +188,7 @@ export class PosService {
 
       await client.ledgerEntry.create({
         data: {
+          userId,
           syncId: `${sale.id}-sale-${randomUUID()}`,
           deviceId: dto.deviceId ?? 'server',
           entryType: 'POS_SALE',
@@ -211,12 +213,13 @@ export class PosService {
     });
   }
 
-  async listSales(query: ListSalesQueryDto) {
+  async listSales(userId: string, query: ListSalesQueryDto) {
     const fromDate = query.from ? new Date(query.from) : undefined;
     const toDate = query.to ? new Date(query.to) : undefined;
 
     return this.prisma.sale.findMany({
       where: {
+        userId,
         ...(fromDate || toDate
           ? {
               createdAt: {
@@ -236,7 +239,7 @@ export class PosService {
     });
   }
 
-  async getDashboardStats() {
+  async getDashboardStats(userId: string) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
@@ -248,11 +251,11 @@ export class PosService {
 
     const [todaySales, lowStockProducts, weekSales, totalUtang] = await Promise.all([
       this.prisma.sale.findMany({
-        where: { createdAt: { gte: todayStart, lte: todayEnd } },
+        where: { userId, createdAt: { gte: todayStart, lte: todayEnd } },
         include: { saleItems: { include: { product: true } } },
       }),
       this.prisma.product.findMany({
-        where: { isDeleted: false, isActive: true },
+        where: { userId, isDeleted: false, isActive: true },
         select: {
           id: true,
           name: true,
@@ -262,11 +265,11 @@ export class PosService {
         },
       }),
       this.prisma.sale.findMany({
-        where: { createdAt: { gte: weekStart } },
+        where: { userId, createdAt: { gte: weekStart } },
         include: { saleItems: { include: { product: true } } },
       }),
       this.prisma.utangRecord.aggregate({
-        where: { isDeleted: false },
+        where: { userId, isDeleted: false },
         _sum: { amount: true },
       }),
     ]);
@@ -315,12 +318,12 @@ export class PosService {
     };
   }
 
-  async getReports(query: ListSalesQueryDto) {
+  async getReports(userId: string, query: ListSalesQueryDto) {
     const fromDate = query.from ? new Date(query.from) : (() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; })();
     const toDate = query.to ? new Date(query.to) : new Date();
 
     const sales = await this.prisma.sale.findMany({
-      where: { createdAt: { gte: fromDate, lte: toDate } },
+      where: { userId, createdAt: { gte: fromDate, lte: toDate } },
       include: { saleItems: { include: { product: true } } },
       orderBy: { createdAt: 'asc' },
     });
@@ -382,16 +385,20 @@ export class PosService {
    * because the originating device has already done so locally. Server stock
    * is the responsibility of the canonical /pos/checkout flow.
    */
-  async pushSales(records: PushSaleDto[]): Promise<number> {
+  async pushSales(userId: string, records: PushSaleDto[]): Promise<number> {
     let synced = 0;
     for (const r of records) {
       const existing = await this.prisma.sale.findUnique({
         where: { syncId: r.syncId },
       });
-      const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+        incomingUpdatedAt = new Date();
+      }
       if (existing && existing.updatedAt > incomingUpdatedAt) continue;
 
       const saleData = {
+        userId,
         reference: r.reference,
         deviceId: r.deviceId ?? null,
         note: r.note ?? '',
@@ -436,16 +443,17 @@ export class PosService {
     return synced;
   }
 
-  async pullSales(query: PullSalesQueryDto) {
+  async pullSales(userId: string, query: PullSalesQueryDto) {
     const sinceMs = Number(query.since ?? '0');
     const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
     const rows = await this.prisma.sale.findMany({
       where: isIncremental
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       include: { saleItems: true },
       orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });

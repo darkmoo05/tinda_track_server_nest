@@ -6,6 +6,6 @@ export declare class TransactionTypeService {
     private readonly prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    push(records: TransactionTypeItemDto[]): Promise<number>;
-    pull(query: PullTransactionTypesQueryDto): Promise<TransactionType[]>;
+    push(userId: string, records: TransactionTypeItemDto[]): Promise<number>;
+    pull(userId: string, query: PullTransactionTypesQueryDto): Promise<TransactionType[]>;
 }

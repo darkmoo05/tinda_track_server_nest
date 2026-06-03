@@ -17,8 +17,8 @@ export declare class CustomersService {
     recordPayment(customerId: string, dto: RecordPaymentDto): Promise<UtangRecord>;
     remove(id: string): Promise<Customer>;
     private ensureCustomerExists;
-    pushCustomers(records: PushCustomerDto[]): Promise<number>;
-    pullCustomers(query: PullCustomersQueryDto): Promise<Customer[]>;
-    pushUtangRecords(records: PushUtangRecordDto[]): Promise<number>;
-    pullUtangRecords(query: PullUtangRecordsQueryDto): Promise<UtangRecord[]>;
+    pushCustomers(userId: string, records: PushCustomerDto[]): Promise<number>;
+    pullCustomers(userId: string, query: PullCustomersQueryDto): Promise<Customer[]>;
+    pushUtangRecords(userId: string, records: PushUtangRecordDto[]): Promise<number>;
+    pullUtangRecords(userId: string, query: PullUtangRecordsQueryDto): Promise<UtangRecord[]>;
 }

@@ -3,11 +3,18 @@ import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'node:path';
 import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
+  
+  // Use Pino logger globally
+  app.useLogger(app.get(Logger));
 
   // Integrate Helmet security headers
   app.use(
@@ -17,11 +24,26 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Allow cross-origin requests during external tunnel testing.
+  // Allow cross-origin requests from any origin in dev (devtunnel, emulator, real device).
+  // TODO: lock this down to specific domains before going to production.
   app.enableCors({
-    origin: true,
+    origin: process.env.NODE_ENV === 'production'
+      ? [/localhost/, /127\.0\.0\.1/, /10\.0\.2\.2/]
+      : true,                              // allow ALL origins in dev / tunnel
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: 'Content-Type, Accept, Authorization, X-Device-Id',
   });
+
+  // Setup Swagger API Documentation
+  const config = new DocumentBuilder()
+    .setTitle('Tinda Track API')
+    .setDescription('Production-grade offline-first mobile sync backend')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
 
   // Global route prefix keeps parity with the Express /api/* routes
   app.setGlobalPrefix('api');

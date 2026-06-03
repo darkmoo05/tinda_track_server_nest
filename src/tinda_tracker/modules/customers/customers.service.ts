@@ -98,15 +98,19 @@ export class CustomersService {
 
   // ─── Customer sync (push/pull) ────────────────────────────────────────────
 
-  async pushCustomers(records: PushCustomerDto[]): Promise<number> {
+  async pushCustomers(userId: string, records: PushCustomerDto[]): Promise<number> {
     let synced = 0;
     for (const r of records) {
       const existing = await this.prisma.customer.findUnique({
         where: { syncId: r.syncId },
       });
-      const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+        incomingUpdatedAt = new Date();
+      }
       if (existing && existing.updatedAt > incomingUpdatedAt) continue;
       const data = {
+        userId,
         deviceId: r.deviceId ?? null,
         name: r.name,
         phone: r.phone ?? '',
@@ -126,31 +130,36 @@ export class CustomersService {
     return synced;
   }
 
-  async pullCustomers(query: PullCustomersQueryDto): Promise<Customer[]> {
+  async pullCustomers(userId: string, query: PullCustomersQueryDto): Promise<Customer[]> {
     const sinceMs = Number(query.since ?? '0');
     const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
     return this.prisma.customer.findMany({
       where: isIncremental
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }
 
   // ─── UtangRecord sync (push/pull) ─────────────────────────────────────────
 
-  async pushUtangRecords(records: PushUtangRecordDto[]): Promise<number> {
+  async pushUtangRecords(userId: string, records: PushUtangRecordDto[]): Promise<number> {
     let synced = 0;
     for (const r of records) {
       const existing = await this.prisma.utangRecord.findUnique({
         where: { syncId: r.syncId },
       });
-      const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+        incomingUpdatedAt = new Date();
+      }
       if (existing && existing.updatedAt > incomingUpdatedAt) continue;
       const data = {
+        userId,
         deviceId: r.deviceId ?? null,
         customerId: r.customerId,
         description: r.description ?? '',
@@ -172,16 +181,17 @@ export class CustomersService {
     return synced;
   }
 
-  async pullUtangRecords(query: PullUtangRecordsQueryDto): Promise<UtangRecord[]> {
+  async pullUtangRecords(userId: string, query: PullUtangRecordsQueryDto): Promise<UtangRecord[]> {
     const sinceMs = Number(query.since ?? '0');
     const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
     return this.prisma.utangRecord.findMany({
       where: isIncremental
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }

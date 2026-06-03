@@ -16,7 +16,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'node:path';
 import { InventoryService } from './inventory.service.js';
 import { ShelfLocationRecordDto } from './dto/push-shelf-locations.dto.js';
-import { Public } from '../../../modules/auth/decorators/public.decorator.js';
+import { CurrentUser, type AuthUser } from '../../../modules/auth/decorators/current-user.decorator.js';
 
 const UPLOAD_DIR = './uploads/shelf-locations';
 
@@ -25,18 +25,18 @@ export class ShelfLocationsController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Get()
-  async list(): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.inventoryService.listShelfLocations();
+  async list(@CurrentUser() user: AuthUser): Promise<{ success: boolean; data: unknown[] }> {
+    const data = await this.inventoryService.listShelfLocations(user.id);
     return { success: true, data };
   }
 
   /** Bulk upsert — called by the Flutter sync service. */
-  @Public()
   @Post('push')
   async push(
+    @CurrentUser() user: AuthUser,
     @Body() body: ShelfLocationRecordDto[],
   ): Promise<{ success: boolean; data: unknown[] }> {
-    const data = await this.inventoryService.pushShelfLocations(body);
+    const data = await this.inventoryService.pushShelfLocations(user.id, body);
     return { success: true, data };
   }
 
@@ -44,14 +44,14 @@ export class ShelfLocationsController {
    * Pull — returns all shelf locations updated since [since] milliseconds epoch.
    * Called by the Flutter sync service to receive server-side changes.
    */
-  @Public()
   @Get('pull')
   async pull(
+    @CurrentUser() user: AuthUser,
     @Query('since') since: string,
     @Query('deviceId') _deviceId?: string,
   ): Promise<{ success: boolean; data: unknown[] }> {
     const sinceMs = parseInt(since ?? '0', 10);
-    const data = await this.inventoryService.pullShelfLocations(sinceMs);
+    const data = await this.inventoryService.pullShelfLocations(user.id, sinceMs);
     return { success: true, data };
   }
 
@@ -85,19 +85,21 @@ export class ShelfLocationsController {
     }),
   )
   async uploadImage(
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<{ success: boolean; data: unknown }> {
     if (!file) throw new BadRequestException('No file provided');
-    const data = await this.inventoryService.updateShelfLocationImage(id, file);
+    const data = await this.inventoryService.updateShelfLocationImage(user.id, id, file);
     return { success: true, data };
   }
 
   @Delete(':id')
   async remove(
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
   ): Promise<{ success: boolean; data: unknown }> {
-    const data = await this.inventoryService.deleteShelfLocation(id);
+    const data = await this.inventoryService.deleteShelfLocation(user.id, id);
     return { success: true, data };
   }
 }

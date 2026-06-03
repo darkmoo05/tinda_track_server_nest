@@ -6,9 +6,9 @@ import { PullSalesQueryDto, PushSaleDto } from './dto/push-sales.dto.js';
 export declare class PosService {
     private readonly prisma;
     constructor(prisma: PrismaService);
-    checkout(dto: CheckoutPosDto): Promise<Sale>;
-    listSales(query: ListSalesQueryDto): Promise<any>;
-    getDashboardStats(): Promise<{
+    checkout(userId: string, dto: CheckoutPosDto): Promise<Sale>;
+    listSales(userId: string, query: ListSalesQueryDto): Promise<any>;
+    getDashboardStats(userId: string): Promise<{
         today: {
             totalSales: any;
             profit: any;
@@ -23,7 +23,7 @@ export declare class PosService {
             productId: string;
         }[];
     }>;
-    getReports(query: ListSalesQueryDto): Promise<{
+    getReports(userId: string, query: ListSalesQueryDto): Promise<{
         summary: {
             totalSales: any;
             totalProfit: any;
@@ -43,6 +43,6 @@ export declare class PosService {
         }[];
     }>;
     private buildReference;
-    pushSales(records: PushSaleDto[]): Promise<number>;
-    pullSales(query: PullSalesQueryDto): Promise<any>;
+    pushSales(userId: string, records: PushSaleDto[]): Promise<number>;
+    pullSales(userId: string, query: PullSalesQueryDto): Promise<any>;
 }

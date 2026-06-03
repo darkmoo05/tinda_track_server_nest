@@ -16,36 +16,36 @@ exports.UtangRecordsController = void 0;
 const common_1 = require("@nestjs/common");
 const customers_service_js_1 = require("./customers.service.js");
 const sync_dto_js_1 = require("./dto/sync.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 let UtangRecordsController = class UtangRecordsController {
     customersService;
     constructor(customersService) {
         this.customersService = customersService;
     }
-    async push(body) {
-        const synced = await this.customersService.pushUtangRecords(body);
+    async push(user, body) {
+        const synced = await this.customersService.pushUtangRecords(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.customersService.pullUtangRecords(query);
+    async pull(user, query) {
+        const data = await this.customersService.pullUtangRecords(user.id, query);
         return { success: true, data };
     }
 };
 exports.UtangRecordsController = UtangRecordsController;
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], UtangRecordsController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [sync_dto_js_1.PullUtangRecordsQueryDto]),
+    __metadata("design:paramtypes", [Object, sync_dto_js_1.PullUtangRecordsQueryDto]),
     __metadata("design:returntype", Promise)
 ], UtangRecordsController.prototype, "pull", null);
 exports.UtangRecordsController = UtangRecordsController = __decorate([

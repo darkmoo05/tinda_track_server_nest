@@ -6,6 +6,6 @@ export declare class PartyService {
     private readonly prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    push(records: PartyItemDto[]): Promise<number>;
-    pull(query: PullPartiesQueryDto): Promise<Party[]>;
+    push(userId: string, records: PartyItemDto[]): Promise<number>;
+    pull(userId: string, query: PullPartiesQueryDto): Promise<Party[]>;
 }

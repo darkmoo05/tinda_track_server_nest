@@ -17,10 +17,10 @@ let DashboardService = class DashboardService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async getDashboard() {
+    async getDashboard(userId) {
         const [totals, recentEntries] = await Promise.all([
             this.prisma.ledgerEntry.aggregate({
-                where: { isDeleted: false },
+                where: { userId, isDeleted: false },
                 _sum: {
                     walletDelta: true,
                     mayaWalletDelta: true,
@@ -29,7 +29,7 @@ let DashboardService = class DashboardService {
                 },
             }),
             this.prisma.ledgerEntry.findMany({
-                where: { isDeleted: false },
+                where: { userId, isDeleted: false },
                 orderBy: { createdAt: 'desc' },
                 take: 20,
             }),

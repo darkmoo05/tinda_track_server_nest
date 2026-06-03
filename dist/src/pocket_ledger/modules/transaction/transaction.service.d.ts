@@ -10,9 +10,9 @@ export declare class TransactionService {
     private readonly chargeService;
     private readonly receiptOcrService;
     constructor(prisma: PrismaService, chargeService: ChargeService, receiptOcrService: ReceiptOcrService);
-    create(dto: CreateTransactionDto, receiptFile?: Express.Multer.File): Promise<Transaction>;
-    list(query: ListTransactionsQueryDto): Promise<Transaction[]>;
-    preview(walletProvider: WalletProvider, direction: TransactionDirection, amount: number, chargeHandling?: 'addOnTop' | 'deductFromAmount', transactionTypeKey?: string): Promise<{
+    create(userId: string, dto: CreateTransactionDto, receiptFile?: Express.Multer.File): Promise<Transaction>;
+    list(userId: string, query: ListTransactionsQueryDto): Promise<Transaction[]>;
+    preview(userId: string, walletProvider: WalletProvider, direction: TransactionDirection, amount: number, chargeHandling?: 'addOnTop' | 'deductFromAmount', transactionTypeKey?: string): Promise<{
         chargeAmount: number;
         totalCollected: number;
         walletCredit: number;

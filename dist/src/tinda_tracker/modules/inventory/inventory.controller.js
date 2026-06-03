@@ -24,7 +24,7 @@ const create_product_dto_js_1 = require("./dto/create-product.dto.js");
 const list_products_query_dto_js_1 = require("./dto/list-products-query.dto.js");
 const update_product_dto_js_1 = require("./dto/update-product.dto.js");
 const push_products_dto_js_1 = require("./dto/push-products.dto.js");
-const public_decorator_js_1 = require("../../../modules/auth/decorators/public.decorator.js");
+const current_user_decorator_js_1 = require("../../../modules/auth/decorators/current-user.decorator.js");
 const UPLOAD_DIR = './uploads/products';
 (0, node_fs_1.mkdirSync)(UPLOAD_DIR, { recursive: true });
 let InventoryController = class InventoryController {
@@ -32,82 +32,85 @@ let InventoryController = class InventoryController {
     constructor(inventoryService) {
         this.inventoryService = inventoryService;
     }
-    async create(body) {
-        const data = await this.inventoryService.create(body);
+    async create(user, body) {
+        const data = await this.inventoryService.create(user.id, body);
         return { success: true, data };
     }
-    async list(query) {
-        const data = await this.inventoryService.list(query);
+    async list(user, query) {
+        const data = await this.inventoryService.list(user.id, query);
         return { success: true, data };
     }
-    async push(body) {
-        const synced = await this.inventoryService.pushProducts(body);
+    async push(user, body) {
+        const synced = await this.inventoryService.pushProducts(user.id, body);
         return { success: true, synced };
     }
-    async pull(query) {
-        const data = await this.inventoryService.pullProducts(query);
+    async pull(user, query) {
+        const data = await this.inventoryService.pullProducts(user.id, query);
         return { success: true, data };
     }
-    async update(id, body) {
-        const data = await this.inventoryService.update(id, body);
+    async update(user, id, body) {
+        const data = await this.inventoryService.update(user.id, id, body);
         return { success: true, data };
     }
-    async uploadImage(id, file) {
+    async uploadImage(user, id, file) {
         if (!file)
             throw new common_1.BadRequestException('No file provided');
-        const data = await this.inventoryService.updateImage(id, file);
+        const data = await this.inventoryService.updateImage(user.id, id, file);
         return { success: true, data };
     }
-    async adjustStock(id, body) {
-        const data = await this.inventoryService.adjustStock(id, body);
+    async adjustStock(user, id, body) {
+        const data = await this.inventoryService.adjustStock(user.id, id, body);
         return { success: true, data };
     }
-    async getMovements(id) {
-        const data = await this.inventoryService.getMovements(id);
+    async getMovements(user, id) {
+        const data = await this.inventoryService.getMovements(user.id, id);
         return { success: true, data };
     }
-    async remove(id) {
-        const data = await this.inventoryService.remove(id);
+    async remove(user, id) {
+        const data = await this.inventoryService.remove(user.id, id);
         return { success: true, data };
     }
 };
 exports.InventoryController = InventoryController;
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_product_dto_js_1.CreateProductDto]),
+    __metadata("design:paramtypes", [Object, create_product_dto_js_1.CreateProductDto]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [list_products_query_dto_js_1.ListProductsQueryDto]),
+    __metadata("design:paramtypes", [Object, list_products_query_dto_js_1.ListProductsQueryDto]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "list", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Post)('push'),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "push", null);
 __decorate([
-    (0, public_decorator_js_1.Public)(),
     (0, common_1.Get)('pull'),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [push_products_dto_js_1.PullProductsQueryDto]),
+    __metadata("design:paramtypes", [Object, push_products_dto_js_1.PullProductsQueryDto]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "pull", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_product_dto_js_1.UpdateProductDto]),
+    __metadata("design:paramtypes", [Object, String, update_product_dto_js_1.UpdateProductDto]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "update", null);
 __decorate([
@@ -130,32 +133,36 @@ __decorate([
         },
         limits: { fileSize: 5 * 1024 * 1024 },
     })),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.UploadedFile)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "uploadImage", null);
 __decorate([
     (0, common_1.Post)(':id/adjust-stock'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, adjust_stock_dto_js_1.AdjustStockDto]),
+    __metadata("design:paramtypes", [Object, String, adjust_stock_dto_js_1.AdjustStockDto]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "adjustStock", null);
 __decorate([
     (0, common_1.Get)(':id/movements'),
-    __param(0, (0, common_1.Param)('id')),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "getMovements", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "remove", null);
 exports.InventoryController = InventoryController = __decorate([

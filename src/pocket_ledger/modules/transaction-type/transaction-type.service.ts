@@ -10,12 +10,13 @@ export class TransactionTypeService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async push(records: TransactionTypeItemDto[]): Promise<number> {
+  async push(userId: string, records: TransactionTypeItemDto[]): Promise<number> {
     await Promise.all(
       records.map((record) =>
         this.prisma.transactionType.upsert({
           where: { syncId: record.syncId },
           create: {
+            userId,
             syncId: record.syncId,
             deviceId: record.deviceId,
             name: record.name,
@@ -24,6 +25,7 @@ export class TransactionTypeService {
             isDeleted: record.isDeleted ?? false,
           },
           update: {
+            userId,
             deviceId: record.deviceId,
             name: record.name,
             isOutflow: record.isOutflow ?? false,
@@ -38,7 +40,7 @@ export class TransactionTypeService {
     return records.length;
   }
 
-  async pull(query: PullTransactionTypesQueryDto): Promise<TransactionType[]> {
+  async pull(userId: string, query: PullTransactionTypesQueryDto): Promise<TransactionType[]> {
     const { since, deviceId } = query;
     const sinceMs = Number(since ?? '0');
     const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
@@ -46,10 +48,11 @@ export class TransactionTypeService {
     return this.prisma.transactionType.findMany({
       where: isIncrementalSync
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(deviceId ? { deviceId: { not: deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       orderBy: isIncrementalSync ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }

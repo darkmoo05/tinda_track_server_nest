@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, HttpStatus } from '@nestjs/common';
-import * as request from 'supertest';
+import { INestApplication, HttpStatus, ValidationPipe } from '@nestjs/common';
+import request from 'supertest';
 import { TransactionDirection, TransactionStatus, WalletProvider, PrismaClient } from '@prisma/client';
 import { TransactionController } from './transaction.controller.js';
 import { TransactionService } from './transaction.service.js';
 import { ChargeService } from '../charge/charge.service.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { ReceiptOcrService } from './receipt-ocr.service.js';
+import { ConfigService } from '@nestjs/config';
 
 describe('TransactionController (Integration)', () => {
   let app: INestApplication;
@@ -19,6 +20,14 @@ describe('TransactionController (Integration)', () => {
       providers: [
         TransactionService,
         PrismaService,
+        {
+          provide: ConfigService,
+          useValue: {
+            getOrThrow: jest.fn().mockReturnValue(
+              process.env.DATABASE_URL || 'postgresql://postgres:DarkMoon@localhost:5432/tinda_track?schema=public'
+            ),
+          },
+        },
         {
           provide: ChargeService,
           useValue: {
@@ -35,10 +44,28 @@ describe('TransactionController (Integration)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+      }),
+    );
     await app.init();
 
     prisma = moduleFixture.get<PrismaService>(PrismaService);
     transactionService = moduleFixture.get<TransactionService>(TransactionService);
+
+    // Create the test user to satisfy foreign key constraints
+    await prisma.user.upsert({
+      where: { id: 'test-user-id' },
+      update: {},
+      create: {
+        id: 'test-user-id',
+        username: 'test-user',
+        password: 'password',
+        role: 'OWNER',
+      },
+    });
   });
 
   afterAll(async () => {
@@ -49,6 +76,22 @@ describe('TransactionController (Integration)', () => {
     // Clean up transactions before each test
     await prisma.ledgerEntry.deleteMany({});
     await prisma.transaction.deleteMany({});
+
+    // Seed a starting balance of 100,000 to prevent insufficient balance errors
+    await prisma.ledgerEntry.create({
+      data: {
+        userId: 'test-user-id',
+        syncId: 'initial-wallet-load-' + Math.random().toString(36).substring(7),
+        deviceId: 'server',
+        entryType: 'INITIAL_LOAD',
+        title: 'Initial Wallet Load',
+        amount: 100000,
+        walletDelta: 100000,
+        mayaWalletDelta: 100000,
+        onHandDelta: 100000,
+        entryDate: new Date().toISOString(),
+      },
+    });
   });
 
   describe('POST /transactions - Idempotency & Duplicate Handling', () => {
@@ -66,16 +109,24 @@ describe('TransactionController (Integration)', () => {
       // First request should succeed
       const firstResponse = await request(app.getHttpServer())
         .post('/transactions')
-        .send(createDto)
-        .expect(HttpStatus.CREATED);
+        .send(createDto);
 
-      expect(firstResponse.body.syncId).toBe(syncId);
+      if (firstResponse.status !== HttpStatus.CREATED) {
+        console.error('firstResponse FAILED:', firstResponse.body);
+      }
+      expect(firstResponse.status).toBe(HttpStatus.CREATED);
+
+      expect(firstResponse.body.data.syncId).toBe(syncId);
 
       // Second request with same syncId should return 409
       const secondResponse = await request(app.getHttpServer())
         .post('/transactions')
-        .send(createDto)
-        .expect(HttpStatus.CONFLICT);
+        .send(createDto);
+
+      if (secondResponse.status !== HttpStatus.CONFLICT) {
+        console.error('secondResponse FAILED:', secondResponse.body);
+      }
+      expect(secondResponse.status).toBe(HttpStatus.CONFLICT);
 
       expect(secondResponse.body.message).toContain('already exists');
     });
@@ -109,33 +160,38 @@ describe('TransactionController (Integration)', () => {
         .send(createDto2)
         .expect(HttpStatus.CREATED);
 
-      expect(response1.body.id).not.toBe(response2.body.id);
+      expect(response1.body.data.id).not.toBe(response2.body.data.id);
     });
   });
 
   describe('POST /transactions - Negative Balance Validation', () => {
     it('should return 400 when transaction would make wallet balance negative', async () => {
-      // First, create a transaction that reduces wallet
-      const cashOutDto = {
+      // First, create a CASH_IN transaction that reduces wallet balance below 0.
+      // The starting balance is 100,000, so a CASH_IN of 150,000 will fail.
+      const cashInNegDto = {
         walletProvider: WalletProvider.GCASH,
-        direction: TransactionDirection.CASH_OUT,
-        amount: 5000,
-        syncId: 'cash-out-1',
+        direction: TransactionDirection.CASH_IN,
+        amount: 150000,
+        syncId: 'cash-in-neg-1',
         deviceId: 'device-1',
         chargeHandling: 'addOnTop',
       };
 
-      // This should fail because wallet starts at 0 (or negative from our perspective)
+      // This should fail because wallet starts at 100,000 and CASH_IN reduces it by 150,000
       const response = await request(app.getHttpServer())
         .post('/transactions')
-        .send(cashOutDto)
-        .expect(HttpStatus.BAD_REQUEST);
+        .send(cashInNegDto);
+
+      if (response.status !== HttpStatus.BAD_REQUEST) {
+        console.error('negative balance test FAILED:', response.status, response.body);
+      }
+      expect(response.status).toBe(HttpStatus.BAD_REQUEST);
 
       expect(response.body.message).toContain('Insufficient wallet balance');
     });
 
     it('should allow transaction if balance remains non-negative', async () => {
-      // First load wallet
+      // First load wallet via CASH_IN (reduces by 5000 -> 95,000 remaining)
       const cashInDto = {
         walletProvider: WalletProvider.GCASH,
         direction: TransactionDirection.CASH_IN,
@@ -150,7 +206,7 @@ describe('TransactionController (Integration)', () => {
         .send(cashInDto)
         .expect(HttpStatus.CREATED);
 
-      // Now cash out part of it
+      // Now cash out part of it (increases balance by 3050)
       const cashOutDto = {
         walletProvider: WalletProvider.GCASH,
         direction: TransactionDirection.CASH_OUT,
@@ -165,7 +221,7 @@ describe('TransactionController (Integration)', () => {
         .send(cashOutDto)
         .expect(HttpStatus.CREATED);
 
-      expect(response.body.balanceAfter).toBeGreaterThanOrEqual(0);
+      expect(response.body.data.balanceAfter).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -186,10 +242,10 @@ describe('TransactionController (Integration)', () => {
         .send(cashInDto)
         .expect(HttpStatus.CREATED);
 
-      // balanceBefore should be 0 (fresh wallet)
-      expect(response.body.balanceBefore).toBe(0);
-      // balanceAfter should be +1000
-      expect(response.body.balanceAfter).toBe(1000);
+      // Starting balance seeded in beforeEach is 100000.
+      // CASH_IN of 1000 reduces wallet by 1000 -> 99000.
+      expect(response.body.data.balanceBefore).toBe(100000);
+      expect(response.body.data.balanceAfter).toBe(99000);
 
       // Create second transaction
       const cashInDto2 = {
@@ -206,14 +262,14 @@ describe('TransactionController (Integration)', () => {
         .send(cashInDto2)
         .expect(HttpStatus.CREATED);
 
-      // balanceBefore should be 1000 (from first transaction)
-      expect(response2.body.balanceBefore).toBe(1000);
-      // balanceAfter should be 1500 (1000 + 500)
-      expect(response2.body.balanceAfter).toBe(1500);
+      // balanceBefore should be 99000 (from first transaction)
+      expect(response2.body.data.balanceBefore).toBe(99000);
+      // CASH_IN of 500 reduces wallet by 500 -> 98500.
+      expect(response2.body.data.balanceAfter).toBe(98500);
     });
 
     it('should maintain consistent balances across concurrent requests', async () => {
-      // Create initial wallet load
+      // Create initial wallet load (CASH_IN of 10,000 reduces 100,000 -> 90,000)
       const initialDto = {
         walletProvider: WalletProvider.GCASH,
         direction: TransactionDirection.CASH_IN,
@@ -228,7 +284,9 @@ describe('TransactionController (Integration)', () => {
         .send(initialDto)
         .expect(HttpStatus.CREATED);
 
-      // Simulate two concurrent transactions
+      // Simulate two concurrent transactions (both CASH_OUT, which increases store's wallet)
+      // concurrent1: CASH_OUT of 2000 (wallet increases by 2000 + 50 = 2050)
+      // concurrent2: CASH_OUT of 3000 (wallet increases by 3000 + 50 = 3050)
       const concurrent1 = {
         walletProvider: WalletProvider.GCASH,
         direction: TransactionDirection.CASH_OUT,
@@ -259,15 +317,23 @@ describe('TransactionController (Integration)', () => {
           .expect(HttpStatus.CREATED),
       ]);
 
-      // Both should have balanceBefore = 10000 (computed inside transaction prevents race)
-      expect(response1.body.balanceBefore).toBe(10000);
-      expect(response2.body.balanceBefore).toBe(10000);
+      // Depending on transaction scheduling order, either response1 or response2 starts first.
+      const bBefore1 = response1.body.data.balanceBefore;
+      const bBefore2 = response2.body.data.balanceBefore;
 
-      // Their balanceAfter values should be deterministic
-      // Since buildMovement for CASH_OUT with addOnTop: walletDelta = -amount + fee
-      // With fee=50: deltas are -1950 and -2950
-      expect(response1.body.balanceAfter).toBe(10000 - 1950); // or -2950 depending on order
-      expect(response2.body.balanceAfter).toBe(10000 - 2950); // or -1950 depending on order
+      expect([90000, 93050]).toContain(bBefore1);
+      expect([90000, 92050]).toContain(bBefore2);
+
+      // One of the balanceBefore values must be 90,000 (the base starting balance)
+      expect(Math.min(bBefore1, bBefore2)).toBe(90000);
+
+      // Their balanceAfter values should reflect the increments:
+      // concurrent1 balanceAfter: bBefore1 + 2050.
+      // concurrent2 balanceAfter: bBefore2 + 3050.
+      // The final balance after both have completed must be 95100.
+      expect([92050, 95100]).toContain(response1.body.data.balanceAfter);
+      expect([93050, 95100]).toContain(response2.body.data.balanceAfter);
+      expect(Math.max(response1.body.data.balanceAfter, response2.body.data.balanceAfter)).toBe(95100);
     });
   });
 
@@ -288,18 +354,18 @@ describe('TransactionController (Integration)', () => {
         .expect(HttpStatus.CREATED);
 
       // Verify chargeHandling is persisted
-      expect(response.body.chargeHandling).toBe('addOnTop');
+      expect(response.body.data.chargeHandling).toBe('addOnTop');
 
       // Verify the ledger entry has correct deltas
       const ledgerEntries = await prisma.ledgerEntry.findMany({
-        where: { transactionId: response.body.id },
+        where: { transactionId: response.body.data.id },
       });
 
       expect(ledgerEntries.length).toBeGreaterThan(0);
       const entry = ledgerEntries[0];
-      // CASH_IN addOnTop with fee=50: walletDelta=+1000, onHandDelta=-950
-      expect(entry.walletDelta).toBe(1000);
-      expect(entry.onHandDelta).toBe(-950);
+      // CASH_IN addOnTop with fee=50: wallet decreases by 1000, cash increases by 1050 (1000 + 50 fee received)
+      expect(entry.walletDelta).toBe(-1000);
+      expect(entry.onHandDelta).toBe(1050);
     });
 
     it('should store external provider metadata', async () => {
@@ -319,8 +385,8 @@ describe('TransactionController (Integration)', () => {
         .send(externalDto)
         .expect(HttpStatus.CREATED);
 
-      expect(response.body.externalProvider).toBe('GCASH_OFFICIAL');
-      expect(response.body.externalTransactionId).toBe('gcash-txn-12345');
+      expect(response.body.data.externalProvider).toBe('GCASH_OFFICIAL');
+      expect(response.body.data.externalTransactionId).toBe('gcash-txn-12345');
     });
   });
 
@@ -360,7 +426,7 @@ describe('TransactionController (Integration)', () => {
         .query({ limit: 10 })
         .expect(HttpStatus.OK);
 
-      expect(response.body.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
     });
   });
 });

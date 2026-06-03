@@ -34,11 +34,16 @@ export class InventoryService {
     @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,
   ) {}
 
-  async create(dto: CreateProductDto): Promise<ProductWithConversions> {
+  async create(userId: string, dto: CreateProductDto): Promise<ProductWithConversions> {
     // Check for a duplicate SKU before attempting any write. Return 409 so
     // the client can offer the user a "restock existing product" flow.
     const existing = await this.prisma.product.findUnique({
-      where: { sku: dto.sku },
+      where: {
+        userId_sku: {
+          userId,
+          sku: dto.sku,
+        },
+      },
     });
     if (existing && !existing.isDeleted) {
       throw new ConflictException({
@@ -63,6 +68,7 @@ export class InventoryService {
     }
 
     const fields = {
+      userId,
       deviceId: dto.deviceId,
       name: dto.name,
       sku: dto.sku,
@@ -82,6 +88,7 @@ export class InventoryService {
         ? {
             unitConversions: {
               create: dto.unitConversions.map((c) => ({
+                userId,
                 syncId: c.syncId ?? randomUUID(),
                 unitName: c.unitName,
                 conversionFactor: c.conversionFactor,
@@ -109,9 +116,10 @@ export class InventoryService {
     });
   }
 
-  async list(query: ListProductsQueryDto): Promise<ProductWithConversions[]> {
+  async list(userId: string, query: ListProductsQueryDto): Promise<ProductWithConversions[]> {
     return this.prisma.product.findMany({
       where: {
+        userId,
         isDeleted: query.includeDeleted ? undefined : false,
         ...(query.search
           ? {
@@ -129,8 +137,8 @@ export class InventoryService {
     });
   }
 
-  async update(productId: string, dto: UpdateProductDto): Promise<ProductWithConversions> {
-    await this.ensureProductExists(productId);
+  async update(userId: string, productId: string, dto: UpdateProductDto): Promise<ProductWithConversions> {
+    await this.ensureProductExists(userId, productId);
 
     // Resolve optional category / shelf-location relations by syncId.
     let categoryId: string | undefined;
@@ -173,6 +181,7 @@ export class InventoryService {
               unitConversions: {
                 deleteMany: {},
                 create: dto.unitConversions.map((c) => ({
+                  userId,
                   syncId: c.syncId ?? randomUUID(),
                   unitName: c.unitName,
                   conversionFactor: c.conversionFactor,
@@ -191,12 +200,12 @@ export class InventoryService {
    * Persist the image URL returned by the storage provider on the product.
    * Called after Multer writes the file to disk inside the controller.
    */
-  async updateImage(productId: string, file: Express.Multer.File): Promise<Product> {
+  async updateImage(userId: string, productId: string, file: Express.Multer.File): Promise<Product> {
     // Fetch the product first so we know the old imageUrl to clean up.
     const existing = await this.prisma.product.findUnique({ where: { id: productId } });
-    if (!existing || existing.isDeleted) throw new NotFoundException('Product not found');
+    if (!existing || existing.isDeleted || existing.userId !== userId) throw new NotFoundException('Product not found');
 
-    const imageUrl = `/uploads/products/${file.filename}`;
+    const imageUrl = await this.storage.uploadFile(file, 'uploads/products');
     const updated = await this.prisma.product.update({
       where: { id: productId },
       data: { imageUrl },
@@ -217,10 +226,10 @@ export class InventoryService {
     return updated;
   }
 
-  async adjustStock(productId: string, dto: AdjustStockDto): Promise<{ product: Product; movement: StockMovement }> {
+  async adjustStock(userId: string, productId: string, dto: AdjustStockDto): Promise<{ product: Product; movement: StockMovement }> {
     return this.prisma.$transaction(async (client) => {
       const product = await client.product.findUnique({ where: { id: productId } });
-      if (!product || product.isDeleted) {
+      if (!product || product.isDeleted || product.userId !== userId) {
         throw new NotFoundException('Product not found');
       }
 
@@ -254,8 +263,8 @@ export class InventoryService {
     });
   }
 
-  async getMovements(productId: string): Promise<StockMovement[]> {
-    await this.ensureProductExists(productId);
+  async getMovements(userId: string, productId: string): Promise<StockMovement[]> {
+    await this.ensureProductExists(userId, productId);
     return this.prisma.stockMovement.findMany({
       where: { productId },
       orderBy: { createdAt: 'desc' },
@@ -263,17 +272,17 @@ export class InventoryService {
     });
   }
 
-  async remove(productId: string): Promise<Product> {
-    await this.ensureProductExists(productId);
+  async remove(userId: string, productId: string): Promise<Product> {
+    await this.ensureProductExists(userId, productId);
     return this.prisma.product.update({
       where: { id: productId },
       data: { isDeleted: true, isActive: false },
     });
   }
 
-  private async ensureProductExists(productId: string): Promise<void> {
+  private async ensureProductExists(userId: string, productId: string): Promise<void> {
     const product = await this.prisma.product.findUnique({ where: { id: productId } });
-    if (!product || product.isDeleted) {
+    if (!product || product.isDeleted || product.userId !== userId) {
       throw new NotFoundException('Product not found');
     }
   }
@@ -285,11 +294,12 @@ export class InventoryService {
    * `isQuickAccess`; the 10-pin cap is enforced *before* anything is written so
    * a single bad payload never partially mutates the table.
    */
-  async pushCategories(records: CategoryRecordDto[]): Promise<ProductCategory[]> {
-    await this.assertQuickAccessCapAfterPush(records);
+  async pushCategories(userId: string, records: CategoryRecordDto[]): Promise<ProductCategory[]> {
+    await this.assertQuickAccessCapAfterPush(userId, records);
     const results: ProductCategory[] = [];
     for (const r of records) {
       const data = {
+        userId,
         name: r.name,
         description: r.description ?? '',
         examples: r.examples ?? '',
@@ -304,7 +314,12 @@ export class InventoryService {
         where: { syncId: r.syncId },
       });
       item ??= await this.prisma.productCategory.findUnique({
-        where: { name: r.name },
+        where: {
+          userId_name: {
+            userId,
+            name: r.name,
+          },
+        },
       });
       if (item) {
         item = await this.prisma.productCategory.update({
@@ -323,10 +338,12 @@ export class InventoryService {
     return results;
   }
 
-  async pullCategories(sinceMs: number): Promise<ProductCategory[]> {
-    const since = new Date(sinceMs);
+  async pullCategories(userId: string, sinceMs: number): Promise<ProductCategory[]> {
+    const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
     return this.prisma.productCategory.findMany({
-      where: { updatedAt: { gte: since } },
+      where: isIncrementalSync
+        ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+        : { userId, isDeleted: false },
       orderBy: { updatedAt: 'asc' },
     });
   }
@@ -354,7 +371,7 @@ export class InventoryService {
    * surface a clear "limit reached" message without leaving the table in a
    * half-applied state.
    */
-  private async assertQuickAccessCapAfterPush(records: CategoryRecordDto[]): Promise<void> {
+  private async assertQuickAccessCapAfterPush(userId: string, records: CategoryRecordDto[]): Promise<void> {
     const incomingSyncIds = records.map((r) => r.syncId);
     const incomingNames = records.map((r) => r.name);
     const incomingPinnedSyncIds = new Set(
@@ -369,6 +386,7 @@ export class InventoryService {
     // syncId is double-counted against the same-named seed row.
     const otherPinned = await this.prisma.productCategory.count({
       where: {
+        userId,
         isQuickAccess: true,
         isDeleted: false,
         syncId: { notIn: incomingSyncIds },
@@ -388,13 +406,15 @@ export class InventoryService {
 
   // ─── Shelf-location management ────────────────────────────────────────────
 
-  async pushShelfLocations(records: ShelfLocationRecordDto[]): Promise<ShelfLocation[]> {
+  async pushShelfLocations(userId: string, records: ShelfLocationRecordDto[]): Promise<ShelfLocation[]> {
     const results: ShelfLocation[] = [];
     for (const r of records) {
       const data = {
+        userId,
         name: r.name,
         description: r.description ?? '',
         examples: r.examples ?? '',
+        imageUrl: r.imageUrl ?? null,
         isDeleted: r.isDeleted ?? false,
       };
       // Reconcile by syncId, then by name — same dual-lookup pattern as
@@ -403,8 +423,20 @@ export class InventoryService {
         where: { syncId: r.syncId },
       });
       item ??= await this.prisma.shelfLocation.findUnique({
-        where: { name: r.name },
+        where: {
+          userId_name: {
+            userId,
+            name: r.name,
+          },
+        },
       });
+      if (item && item.imageUrl && (r.imageUrl === null || r.imageUrl === undefined || r.imageUrl !== item.imageUrl)) {
+        const filename = item.imageUrl.split('/').pop();
+        if (filename) {
+          const oldPath = join('./uploads/shelf-locations', filename);
+          unlink(oldPath).catch(() => {});
+        }
+      }
       if (item) {
         item = await this.prisma.shelfLocation.update({
           where: { id: item.id },
@@ -420,24 +452,26 @@ export class InventoryService {
     return results;
   }
 
-  async pullShelfLocations(sinceMs: number): Promise<ShelfLocation[]> {
-    const since = new Date(sinceMs);
+  async pullShelfLocations(userId: string, sinceMs: number): Promise<ShelfLocation[]> {
+    const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
     return this.prisma.shelfLocation.findMany({
-      where: { updatedAt: { gte: since } },
+      where: isIncrementalSync
+        ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+        : { userId, isDeleted: false },
       orderBy: { updatedAt: 'asc' },
     });
   }
 
-  async listShelfLocations(): Promise<ShelfLocation[]> {
+  async listShelfLocations(userId: string): Promise<ShelfLocation[]> {
     return this.prisma.shelfLocation.findMany({
-      where: { isDeleted: false },
+      where: { userId, isDeleted: false },
       orderBy: { name: 'asc' },
     });
   }
 
-  async deleteShelfLocation(id: string): Promise<ShelfLocation> {
+  async deleteShelfLocation(userId: string, id: string): Promise<ShelfLocation> {
     const existing = await this.prisma.shelfLocation.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('Shelf location not found');
+    if (!existing || existing.isDeleted || existing.userId !== userId) throw new NotFoundException('Shelf location not found');
     return this.prisma.shelfLocation.update({
       where: { id },
       data: { isDeleted: true },
@@ -450,9 +484,9 @@ export class InventoryService {
    * Routed via [STORAGE_PROVIDER] so swapping in a CDN (DO Spaces, S3) only
    * touches the provider class.
    */
-  async updateShelfLocationImage(id: string, file: Express.Multer.File): Promise<ShelfLocation> {
+  async updateShelfLocationImage(userId: string, id: string, file: Express.Multer.File): Promise<ShelfLocation> {
     const existing = await this.prisma.shelfLocation.findUnique({ where: { id } });
-    if (!existing || existing.isDeleted) throw new NotFoundException('Shelf location not found');
+    if (!existing || existing.isDeleted || existing.userId !== userId) throw new NotFoundException('Shelf location not found');
 
     const imageUrl = await this.storage.uploadFile(file, 'uploads/shelf-locations');
     const updated = await this.prisma.shelfLocation.update({
@@ -479,7 +513,7 @@ export class InventoryService {
    * server's row is newer the push is silently ignored to avoid stomping
    * concurrent edits.
    */
-  async pushProducts(records: PushProductDto[]): Promise<number> {
+  async pushProducts(userId: string, records: PushProductDto[]): Promise<number> {
     let synced = 0;
     for (const r of records) {
       // Dual-lookup: try by syncId first, then fall back to the UNIQUE
@@ -490,14 +524,23 @@ export class InventoryService {
         where: { syncId: r.syncId },
       });
       existing ??= await this.prisma.product.findUnique({
-        where: { sku: r.sku },
+        where: {
+          userId_sku: {
+            userId,
+            sku: r.sku,
+          },
+        },
       });
-      const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+        incomingUpdatedAt = new Date();
+      }
       if (existing && existing.updatedAt > incomingUpdatedAt) {
         // Server row is newer — LWW conflict resolution drops the inbound write.
         continue;
       }
       const data = {
+        userId,
         deviceId: r.deviceId ?? null,
         name: r.name,
         sku: r.sku,
@@ -516,6 +559,13 @@ export class InventoryService {
         categoryId: r.categoryId ?? null,
         shelfLocationId: r.shelfLocationId ?? null,
       };
+      if (existing && existing.imageUrl && (r.imageUrl === null || r.imageUrl === undefined || r.imageUrl !== existing.imageUrl)) {
+        const filename = existing.imageUrl.split('/').pop();
+        if (filename) {
+          const oldPath = join('./uploads/products', filename);
+          unlink(oldPath).catch(() => {});
+        }
+      }
       if (existing) {
         await this.prisma.product.update({
           where: { id: existing.id },
@@ -533,16 +583,17 @@ export class InventoryService {
     return synced;
   }
 
-  async pullProducts(query: PullProductsQueryDto): Promise<Product[]> {
+  async pullProducts(userId: string, query: PullProductsQueryDto): Promise<Product[]> {
     const sinceMs = Number(query.since ?? '0');
     const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
     return this.prisma.product.findMany({
       where: isIncremental
         ? {
+            userId,
             updatedAt: { gt: new Date(sinceMs) },
             ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
           }
-        : { isDeleted: false },
+        : { userId, isDeleted: false },
       orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }
@@ -550,6 +601,7 @@ export class InventoryService {
   // ─── Product unit conversion sync (push/pull) ─────────────────────────────
 
   async pushProductUnitConversions(
+    userId: string,
     records: PushProductUnitConversionDto[],
   ): Promise<number> {
     let synced = 0;
@@ -557,9 +609,13 @@ export class InventoryService {
       const existing = await this.prisma.productUnitConversion.findUnique({
         where: { syncId: r.syncId },
       });
-      const incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+      if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+        incomingUpdatedAt = new Date();
+      }
       if (existing && existing.updatedAt > incomingUpdatedAt) continue;
       const data = {
+        userId,
         productId: r.productId,
         unitName: r.unitName,
         conversionFactor: r.conversionFactor,
@@ -582,15 +638,16 @@ export class InventoryService {
   }
 
   async pullProductUnitConversions(
+    userId: string,
     query: PullProductUnitConversionsQueryDto,
   ): Promise<ProductUnitConversion[]> {
     const sinceMs = Number(query.since ?? '0');
     const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
     return this.prisma.productUnitConversion.findMany({
-      where: isIncremental ? { updatedAt: { gt: new Date(sinceMs) } } : {},
+      where: isIncremental
+        ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+        : { userId },
       orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
     });
   }
 }
-
-
