@@ -1,0 +1,564 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.InventoryService = void 0;
+const common_1 = require("@nestjs/common");
+const promises_1 = require("node:fs/promises");
+const node_crypto_1 = require("node:crypto");
+const node_path_1 = require("node:path");
+const client_1 = require("@prisma/client");
+const prisma_service_js_1 = require("../../../prisma/prisma.service.js");
+const storage_provider_interface_js_1 = require("../../../core/storage/storage-provider.interface.js");
+const MAX_QUICK_ACCESS_CATEGORIES = 10;
+let InventoryService = class InventoryService {
+    prisma;
+    storage;
+    constructor(prisma, storage) {
+        this.prisma = prisma;
+        this.storage = storage;
+    }
+    async create(userId, dto) {
+        const existing = await this.prisma.product.findUnique({
+            where: {
+                userId_sku: {
+                    userId,
+                    sku: dto.sku,
+                },
+            },
+        });
+        if (existing && !existing.isDeleted) {
+            throw new common_1.ConflictException({
+                code: 'DUPLICATE_SKU',
+                message: `A product with SKU "${dto.sku}" already exists.`,
+                existingProduct: existing,
+            });
+        }
+        let categoryId;
+        let resolvedCategory = dto.category ?? 'General';
+        if (dto.categorySyncId) {
+            const cat = await this.prisma.productCategory.findUnique({ where: { syncId: dto.categorySyncId } });
+            if (cat && !cat.isDeleted) {
+                categoryId = cat.id;
+                resolvedCategory = cat.name;
+            }
+        }
+        let shelfLocationId;
+        let resolvedShelfLocation = dto.shelfLocation ?? 'Counter';
+        if (dto.shelfLocationSyncId) {
+            const loc = await this.prisma.shelfLocation.findUnique({ where: { syncId: dto.shelfLocationSyncId } });
+            if (loc && !loc.isDeleted) {
+                shelfLocationId = loc.id;
+                resolvedShelfLocation = loc.name;
+            }
+        }
+        const fields = {
+            userId,
+            deviceId: dto.deviceId,
+            name: dto.name,
+            sku: dto.sku,
+            description: dto.description ?? '',
+            category: resolvedCategory,
+            baseUnit: dto.baseUnit ?? 'pcs',
+            costPrice: dto.costPrice ?? 0,
+            sellingPrice: dto.sellingPrice,
+            stockInBaseUnit: dto.stockInBaseUnit ?? 0,
+            reorderPoint: dto.reorderPoint ?? 0,
+            isActive: dto.isActive ?? true,
+            shelfLocation: resolvedShelfLocation,
+            ...(categoryId ? { categoryId } : {}),
+            ...(shelfLocationId ? { shelfLocationId } : {}),
+            ...(dto.expirationDate ? { expirationDate: new Date(dto.expirationDate) } : {}),
+            ...(dto.unitConversions && dto.unitConversions.length > 0
+                ? {
+                    unitConversions: {
+                        create: dto.unitConversions.map((c) => ({
+                            userId,
+                            syncId: c.syncId ?? (0, node_crypto_1.randomUUID)(),
+                            unitName: c.unitName,
+                            conversionFactor: c.conversionFactor,
+                            costPrice: c.costPrice,
+                            sellingPrice: c.sellingPrice,
+                        })),
+                    },
+                }
+                : {}),
+        };
+        if (dto.syncId) {
+            return this.prisma.product.upsert({
+                where: { syncId: dto.syncId },
+                create: { syncId: dto.syncId, ...fields },
+                update: {},
+                include: { unitConversions: true },
+            });
+        }
+        return this.prisma.product.create({
+            data: fields,
+            include: { unitConversions: true },
+        });
+    }
+    async list(userId, query) {
+        return this.prisma.product.findMany({
+            where: {
+                userId,
+                isDeleted: query.includeDeleted ? undefined : false,
+                ...(query.search
+                    ? {
+                        OR: [
+                            { name: { contains: query.search, mode: 'insensitive' } },
+                            { sku: { contains: query.search, mode: 'insensitive' } },
+                            { category: { contains: query.search, mode: 'insensitive' } },
+                        ],
+                    }
+                    : {}),
+            },
+            orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+            take: query.limit ?? 50,
+            include: { unitConversions: true },
+        });
+    }
+    async update(userId, productId, dto) {
+        await this.ensureProductExists(userId, productId);
+        let categoryId;
+        let resolvedCategory = dto.category;
+        if (dto.categorySyncId) {
+            const cat = await this.prisma.productCategory.findUnique({ where: { syncId: dto.categorySyncId } });
+            if (cat && !cat.isDeleted) {
+                categoryId = cat.id;
+                resolvedCategory = cat.name;
+            }
+        }
+        let shelfLocationId;
+        let resolvedShelfLocation = dto.shelfLocation;
+        if (dto.shelfLocationSyncId) {
+            const loc = await this.prisma.shelfLocation.findUnique({ where: { syncId: dto.shelfLocationSyncId } });
+            if (loc && !loc.isDeleted) {
+                shelfLocationId = loc.id;
+                resolvedShelfLocation = loc.name;
+            }
+        }
+        return this.prisma.product.update({
+            where: { id: productId },
+            data: {
+                ...(dto.name !== undefined ? { name: dto.name } : {}),
+                ...(dto.sku !== undefined ? { sku: dto.sku } : {}),
+                ...(dto.description !== undefined ? { description: dto.description } : {}),
+                ...(resolvedCategory !== undefined ? { category: resolvedCategory } : {}),
+                ...(dto.baseUnit !== undefined ? { baseUnit: dto.baseUnit } : {}),
+                ...(dto.costPrice !== undefined ? { costPrice: dto.costPrice } : {}),
+                ...(dto.sellingPrice !== undefined ? { sellingPrice: dto.sellingPrice } : {}),
+                ...(dto.stockInBaseUnit !== undefined
+                    ? { stockInBaseUnit: dto.stockInBaseUnit }
+                    : {}),
+                ...(dto.reorderPoint !== undefined ? { reorderPoint: dto.reorderPoint } : {}),
+                ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+                ...(dto.deviceId !== undefined ? { deviceId: dto.deviceId } : {}),
+                ...(resolvedShelfLocation !== undefined ? { shelfLocation: resolvedShelfLocation } : {}),
+                ...(categoryId ? { categoryId } : {}),
+                ...(shelfLocationId ? { shelfLocationId } : {}),
+                ...(dto.expirationDate !== undefined
+                    ? { expirationDate: dto.expirationDate ? new Date(dto.expirationDate) : null }
+                    : {}),
+                ...(dto.unitConversions
+                    ? {
+                        unitConversions: {
+                            deleteMany: {},
+                            create: dto.unitConversions.map((c) => ({
+                                userId,
+                                syncId: c.syncId ?? (0, node_crypto_1.randomUUID)(),
+                                unitName: c.unitName,
+                                conversionFactor: c.conversionFactor,
+                                costPrice: c.costPrice,
+                                sellingPrice: c.sellingPrice,
+                            })),
+                        },
+                    }
+                    : {}),
+            },
+            include: { unitConversions: true },
+        });
+    }
+    async updateImage(userId, productId, file) {
+        const existing = await this.prisma.product.findUnique({ where: { id: productId } });
+        if (!existing || existing.isDeleted || existing.userId !== userId)
+            throw new common_1.NotFoundException('Product not found');
+        const imageUrl = await this.storage.uploadFile(file, 'uploads/products');
+        const updated = await this.prisma.product.update({
+            where: { id: productId },
+            data: { imageUrl },
+        });
+        if (existing.imageUrl) {
+            const oldFilename = existing.imageUrl.split('/').pop();
+            if (oldFilename) {
+                const oldPath = (0, node_path_1.join)(file.destination, oldFilename);
+                (0, promises_1.unlink)(oldPath).catch(() => {
+                });
+            }
+        }
+        return updated;
+    }
+    async adjustStock(userId, productId, dto) {
+        return this.prisma.$transaction(async (client) => {
+            const product = await client.product.findUnique({ where: { id: productId } });
+            if (!product || product.isDeleted || product.userId !== userId) {
+                throw new common_1.NotFoundException('Product not found');
+            }
+            const previousQuantity = product.stockInBaseUnit;
+            const newQuantity = previousQuantity + dto.quantityDelta;
+            if (newQuantity < 0) {
+                throw new common_1.BadRequestException('Stock quantity cannot go below zero');
+            }
+            const updatedProduct = await client.product.update({
+                where: { id: productId },
+                data: { stockInBaseUnit: newQuantity },
+            });
+            const movement = await client.stockMovement.create({
+                data: {
+                    productId,
+                    movementType: dto.movementType ??
+                        (dto.quantityDelta >= 0 ? client_1.StockMovementType.RESTOCK : client_1.StockMovementType.ADJUSTMENT),
+                    quantity: dto.quantityDelta,
+                    previousQuantity,
+                    newQuantity,
+                    note: dto.note ?? '',
+                    reference: dto.reference ?? `INV-${(0, node_crypto_1.randomUUID)().slice(0, 8).toUpperCase()}`,
+                    ...(dto.expirationDate ? { expirationDate: new Date(dto.expirationDate) } : {}),
+                },
+            });
+            return { product: updatedProduct, movement };
+        });
+    }
+    async getMovements(userId, productId) {
+        await this.ensureProductExists(userId, productId);
+        return this.prisma.stockMovement.findMany({
+            where: { productId },
+            orderBy: { createdAt: 'desc' },
+            take: 200,
+        });
+    }
+    async remove(userId, productId) {
+        await this.ensureProductExists(userId, productId);
+        return this.prisma.product.update({
+            where: { id: productId },
+            data: { isDeleted: true, isActive: false },
+        });
+    }
+    async ensureProductExists(userId, productId) {
+        const product = await this.prisma.product.findUnique({ where: { id: productId } });
+        if (!product || product.isDeleted || product.userId !== userId) {
+            throw new common_1.NotFoundException('Product not found');
+        }
+    }
+    async pushCategories(userId, records) {
+        await this.assertQuickAccessCapAfterPush(userId, records);
+        const results = [];
+        for (const r of records) {
+            const data = {
+                userId,
+                name: r.name,
+                description: r.description ?? '',
+                examples: r.examples ?? '',
+                isQuickAccess: r.isQuickAccess ?? false,
+                isDeleted: r.isDeleted ?? false,
+            };
+            let item = await this.prisma.productCategory.findUnique({
+                where: { syncId: r.syncId },
+            });
+            item ??= await this.prisma.productCategory.findUnique({
+                where: {
+                    userId_name: {
+                        userId,
+                        name: r.name,
+                    },
+                },
+            });
+            if (item) {
+                item = await this.prisma.productCategory.update({
+                    where: { id: item.id },
+                    data: { ...data, syncId: r.syncId },
+                });
+            }
+            else {
+                item = await this.prisma.productCategory.create({
+                    data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
+                });
+            }
+            results.push(item);
+        }
+        return results;
+    }
+    async pullCategories(userId, sinceMs) {
+        const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
+        return this.prisma.productCategory.findMany({
+            where: isIncrementalSync
+                ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+                : { userId, isDeleted: false },
+            orderBy: { updatedAt: 'asc' },
+        });
+    }
+    async listCategories() {
+        return this.prisma.productCategory.findMany({
+            where: { isDeleted: false },
+            orderBy: [{ isQuickAccess: 'desc' }, { name: 'asc' }],
+        });
+    }
+    async deleteCategory(id) {
+        const existing = await this.prisma.productCategory.findUnique({ where: { id } });
+        if (!existing)
+            throw new common_1.NotFoundException('Category not found');
+        return this.prisma.productCategory.update({
+            where: { id },
+            data: { isDeleted: true },
+        });
+    }
+    async assertQuickAccessCapAfterPush(userId, records) {
+        const incomingSyncIds = records.map((r) => r.syncId);
+        const incomingNames = records.map((r) => r.name);
+        const incomingPinnedSyncIds = new Set(records
+            .filter((r) => r.isQuickAccess === true && r.isDeleted !== true)
+            .map((r) => r.syncId));
+        const otherPinned = await this.prisma.productCategory.count({
+            where: {
+                userId,
+                isQuickAccess: true,
+                isDeleted: false,
+                syncId: { notIn: incomingSyncIds },
+                name: { notIn: incomingNames },
+            },
+        });
+        const total = otherPinned + incomingPinnedSyncIds.size;
+        if (total > MAX_QUICK_ACCESS_CATEGORIES) {
+            throw new common_1.BadRequestException({
+                code: 'QUICK_ACCESS_LIMIT_EXCEEDED',
+                message: `Only ${MAX_QUICK_ACCESS_CATEGORIES} categories can be pinned for quick access. Attempted total: ${total}.`,
+                limit: MAX_QUICK_ACCESS_CATEGORIES,
+                attempted: total,
+            });
+        }
+    }
+    async pushShelfLocations(userId, records) {
+        const results = [];
+        for (const r of records) {
+            const data = {
+                userId,
+                name: r.name,
+                description: r.description ?? '',
+                examples: r.examples ?? '',
+                imageUrl: r.imageUrl ?? null,
+                isDeleted: r.isDeleted ?? false,
+            };
+            let item = await this.prisma.shelfLocation.findUnique({
+                where: { syncId: r.syncId },
+            });
+            item ??= await this.prisma.shelfLocation.findUnique({
+                where: {
+                    userId_name: {
+                        userId,
+                        name: r.name,
+                    },
+                },
+            });
+            if (item && item.imageUrl && (r.imageUrl === null || r.imageUrl === undefined || r.imageUrl !== item.imageUrl)) {
+                const filename = item.imageUrl.split('/').pop();
+                if (filename) {
+                    const oldPath = (0, node_path_1.join)('./uploads/shelf-locations', filename);
+                    (0, promises_1.unlink)(oldPath).catch(() => { });
+                }
+            }
+            if (item) {
+                item = await this.prisma.shelfLocation.update({
+                    where: { id: item.id },
+                    data: { ...data, syncId: r.syncId },
+                });
+            }
+            else {
+                item = await this.prisma.shelfLocation.create({
+                    data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
+                });
+            }
+            results.push(item);
+        }
+        return results;
+    }
+    async pullShelfLocations(userId, sinceMs) {
+        const isIncrementalSync = Number.isFinite(sinceMs) && sinceMs > 0;
+        return this.prisma.shelfLocation.findMany({
+            where: isIncrementalSync
+                ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+                : { userId, isDeleted: false },
+            orderBy: { updatedAt: 'asc' },
+        });
+    }
+    async listShelfLocations(userId) {
+        return this.prisma.shelfLocation.findMany({
+            where: { userId, isDeleted: false },
+            orderBy: { name: 'asc' },
+        });
+    }
+    async deleteShelfLocation(userId, id) {
+        const existing = await this.prisma.shelfLocation.findUnique({ where: { id } });
+        if (!existing || existing.isDeleted || existing.userId !== userId)
+            throw new common_1.NotFoundException('Shelf location not found');
+        return this.prisma.shelfLocation.update({
+            where: { id },
+            data: { isDeleted: true },
+        });
+    }
+    async updateShelfLocationImage(userId, id, file) {
+        const existing = await this.prisma.shelfLocation.findUnique({ where: { id } });
+        if (!existing || existing.isDeleted || existing.userId !== userId)
+            throw new common_1.NotFoundException('Shelf location not found');
+        const imageUrl = await this.storage.uploadFile(file, 'uploads/shelf-locations');
+        const updated = await this.prisma.shelfLocation.update({
+            where: { id },
+            data: { imageUrl },
+        });
+        if (existing.imageUrl) {
+            const oldFilename = existing.imageUrl.split('/').pop();
+            if (oldFilename) {
+                const oldPath = (0, node_path_1.join)(file.destination, oldFilename);
+                (0, promises_1.unlink)(oldPath).catch(() => { });
+            }
+        }
+        return updated;
+    }
+    async pushProducts(userId, records) {
+        let synced = 0;
+        for (const r of records) {
+            let existing = await this.prisma.product.findUnique({
+                where: { syncId: r.syncId },
+            });
+            existing ??= await this.prisma.product.findUnique({
+                where: {
+                    userId_sku: {
+                        userId,
+                        sku: r.sku,
+                    },
+                },
+            });
+            let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                incomingUpdatedAt = new Date();
+            }
+            if (existing && existing.updatedAt > incomingUpdatedAt) {
+                continue;
+            }
+            const data = {
+                userId,
+                deviceId: r.deviceId ?? null,
+                name: r.name,
+                sku: r.sku,
+                description: r.description ?? '',
+                category: r.category ?? 'General',
+                baseUnit: r.baseUnit ?? 'pcs',
+                costPrice: r.costPrice ?? 0,
+                sellingPrice: r.sellingPrice,
+                stockInBaseUnit: r.stockInBaseUnit ?? 0,
+                reorderPoint: r.reorderPoint ?? 0,
+                isActive: r.isActive ?? true,
+                isDeleted: r.isDeleted ?? false,
+                imageUrl: r.imageUrl ?? null,
+                shelfLocation: r.shelfLocation ?? 'Counter',
+                expirationDate: r.expirationDate ? new Date(r.expirationDate) : null,
+                categoryId: r.categoryId ?? null,
+                shelfLocationId: r.shelfLocationId ?? null,
+            };
+            if (existing && existing.imageUrl && (r.imageUrl === null || r.imageUrl === undefined || r.imageUrl !== existing.imageUrl)) {
+                const filename = existing.imageUrl.split('/').pop();
+                if (filename) {
+                    const oldPath = (0, node_path_1.join)('./uploads/products', filename);
+                    (0, promises_1.unlink)(oldPath).catch(() => { });
+                }
+            }
+            if (existing) {
+                await this.prisma.product.update({
+                    where: { id: existing.id },
+                    data: { ...data, syncId: r.syncId },
+                });
+            }
+            else {
+                await this.prisma.product.create({
+                    data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
+                });
+            }
+            synced++;
+        }
+        return synced;
+    }
+    async pullProducts(userId, query) {
+        const sinceMs = Number(query.since ?? '0');
+        const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
+        return this.prisma.product.findMany({
+            where: isIncremental
+                ? {
+                    userId,
+                    updatedAt: { gt: new Date(sinceMs) },
+                    ...(query.deviceId ? { deviceId: { not: query.deviceId } } : {}),
+                }
+                : { userId, isDeleted: false },
+            orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
+        });
+    }
+    async pushProductUnitConversions(userId, records) {
+        let synced = 0;
+        for (const r of records) {
+            const existing = await this.prisma.productUnitConversion.findUnique({
+                where: { syncId: r.syncId },
+            });
+            let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+            if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                incomingUpdatedAt = new Date();
+            }
+            if (existing && existing.updatedAt > incomingUpdatedAt)
+                continue;
+            const data = {
+                userId,
+                productId: r.productId,
+                unitName: r.unitName,
+                conversionFactor: r.conversionFactor,
+                costPrice: r.costPrice,
+                sellingPrice: r.sellingPrice,
+            };
+            if (existing) {
+                await this.prisma.productUnitConversion.update({
+                    where: { id: existing.id },
+                    data,
+                });
+            }
+            else {
+                await this.prisma.productUnitConversion.create({
+                    data: { ...(r.id ? { id: r.id } : {}), syncId: r.syncId, ...data },
+                });
+            }
+            synced++;
+        }
+        return synced;
+    }
+    async pullProductUnitConversions(userId, query) {
+        const sinceMs = Number(query.since ?? '0');
+        const isIncremental = Number.isFinite(sinceMs) && sinceMs > 0;
+        return this.prisma.productUnitConversion.findMany({
+            where: isIncremental
+                ? { userId, updatedAt: { gt: new Date(sinceMs) } }
+                : { userId },
+            orderBy: isIncremental ? { updatedAt: 'asc' } : { createdAt: 'asc' },
+        });
+    }
+};
+exports.InventoryService = InventoryService;
+exports.InventoryService = InventoryService = __decorate([
+    (0, common_1.Injectable)(),
+    __param(1, (0, common_1.Inject)(storage_provider_interface_js_1.STORAGE_PROVIDER)),
+    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService, Object])
+], InventoryService);
+//# sourceMappingURL=inventory.service.js.map
