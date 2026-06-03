@@ -465,7 +465,7 @@ __decorate([
 ], PushTransactionDto.prototype, "reference", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], PushTransactionDto.prototype, "entryDate", void 0);
 __decorate([
@@ -617,7 +617,7 @@ __decorate([
 ], PushLedgerEntryDto.prototype, "ownerPartyAccount", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], PushLedgerEntryDto.prototype, "entryDate", void 0);
 __decorate([

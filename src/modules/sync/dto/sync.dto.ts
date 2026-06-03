@@ -308,8 +308,8 @@ export class PushTransactionDto {
   reference?: string;
 
   @IsString()
-  @IsNotEmpty()
-  entryDate!: string;
+  @IsOptional()
+  entryDate?: string;
 
   @IsEnum(TransactionStatus)
   @IsOptional()
@@ -409,8 +409,8 @@ export class PushLedgerEntryDto {
   ownerPartyAccount?: string;
 
   @IsString()
-  @IsNotEmpty()
-  entryDate!: string;
+  @IsOptional()
+  entryDate?: string;
 
   @IsBoolean()
   @IsOptional()

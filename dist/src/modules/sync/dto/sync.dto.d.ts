@@ -83,7 +83,7 @@ export declare class PushTransactionDto {
     externalTransactionId?: string;
     note?: string;
     reference?: string;
-    entryDate: string;
+    entryDate?: string;
     status?: TransactionStatus;
     createdAt?: string;
     updatedAt?: string;
@@ -110,7 +110,7 @@ export declare class PushLedgerEntryDto {
     ownerCategory?: string;
     ownerPartyName?: string;
     ownerPartyAccount?: string;
-    entryDate: string;
+    entryDate?: string;
     isDeleted?: boolean;
     createdAt?: string;
     updatedAt?: string;

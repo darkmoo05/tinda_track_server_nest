@@ -62,6 +62,7 @@ model Charge {
   @@index([updatedAt])
   @@index([deviceId])
   @@index([userId])
+  @@index([userId, updatedAt])
   @@map("charges")
 }
 
@@ -84,6 +85,7 @@ model Party {
   @@index([updatedAt])
   @@index([deviceId])
   @@index([userId])
+  @@index([userId, updatedAt])
   @@map("parties")
 }
 
@@ -103,6 +105,7 @@ model TransactionType {
   @@index([updatedAt])
   @@index([deviceId])
   @@index([userId])
+  @@index([userId, updatedAt])
   @@map("transaction_types")
 }
 
@@ -120,6 +123,7 @@ model MovementCategory {
   @@index([updatedAt])
   @@index([deviceId])
   @@index([userId])
+  @@index([userId, updatedAt])
   @@map("movement_categories")
 }
 
@@ -146,6 +150,7 @@ model FeeTransaction {
   @@index([updatedAt])
   @@index([deviceId])
   @@index([userId])
+  @@index([userId, updatedAt])
   @@map("fee_transactions")
 }
 
@@ -350,6 +355,7 @@ model ProductUnitConversion {
   @@index([productId])
   @@index([updatedAt])
   @@index([userId])
+  @@index([userId, updatedAt])
   @@map("product_unit_conversions")
 }
 
