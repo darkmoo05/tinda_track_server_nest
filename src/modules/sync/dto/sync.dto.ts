@@ -71,7 +71,6 @@ export class PushPartyDto {
   name!: string;
 
   @IsString()
-  @IsNotEmpty()
   accountNumber!: string;
 
   @IsString()
