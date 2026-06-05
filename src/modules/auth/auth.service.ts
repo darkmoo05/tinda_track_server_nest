@@ -51,12 +51,36 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.prisma.user.create({
-      data: {
-        username: dto.username,
-        password: hashedPassword,
-        role: dto.role,
-      },
+    
+    const defaultPrefs = {
+      showRecipes: dto.businessType === 'food_service',
+      showSerialTracking: ['auto_parts', 'hardware'].includes(dto.businessType),
+      showMultiLocation: ['auto_parts', 'hardware'].includes(dto.businessType),
+      showBundles: ['auto_parts', 'hardware'].includes(dto.businessType),
+    };
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          username: dto.username,
+          password: hashedPassword,
+          role: dto.role,
+        },
+      });
+
+      await tx.businessProfile.create({
+        data: {
+          syncId: randomUUID(),
+          deviceId: dto.deviceId ?? 'server-initial',
+          userId: u.id,
+          businessName: dto.businessName,
+          businessType: dto.businessType,
+          defaultCurrency: dto.defaultCurrency ?? 'PHP',
+          preferences: defaultPrefs,
+        },
+      });
+
+      return u;
     });
 
     const { password, ...result } = user;

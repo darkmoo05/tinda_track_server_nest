@@ -37,6 +37,11 @@ enum StockMovementType {
   RESTOCK
   ADJUSTMENT
   SALE
+  WASTE
+  PRODUCTION_DEDUCTION
+  PRODUCTION_ENTRY
+  RETURN_TO_VENDOR
+  CUSTOMER_RETURN
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -315,6 +320,13 @@ model Product {
   stockMovements    StockMovement[]
   user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  // Multi-industry dynamic attributes & extensions (Phase 2)
+  itemType            String            @default("standard") // "standard", "recipe", "ingredient", "bundle", "service"
+  customAttributes    Json              @default("{}")       // e.g. vehicle compatibility, dimensions, weight capacity
+  serialNumbers       ProductSerialNumber[]
+  recipeIngredients   ProductRecipeIngredient[] @relation("RecipeToIngredients")
+  ingredientInRecipes ProductRecipeIngredient[] @relation("IngredientToRecipes")
+
   @@unique([userId, sku])
   @@index([userId, updatedAt])
   @@index([deviceId])
@@ -454,23 +466,71 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Per-user data isolation — all store data belongs to the user who created it
-  charges              Charge[]
-  parties              Party[]
-  transactionTypes     TransactionType[]
-  movementCategories   MovementCategory[]
-  feeTransactions      FeeTransaction[]
-  ledgerEntries        LedgerEntry[]
-  transactions         Transaction[]
-  productCategories    ProductCategory[]
-  shelfLocations       ShelfLocation[]
-  products             Product[]
+  charges                Charge[]
+  parties                Party[]
+  transactionTypes       TransactionType[]
+  movementCategories     MovementCategory[]
+  feeTransactions        FeeTransaction[]
+  ledgerEntries          LedgerEntry[]
+  transactions           Transaction[]
+  productCategories      ProductCategory[]
+  shelfLocations         ShelfLocation[]
+  products               Product[]
   productUnitConversions ProductUnitConversion[]
-  sales                Sale[]
-  customers            Customer[]
-  utangRecords         UtangRecord[]
-  refreshTokens        RefreshToken[]
+  sales                  Sale[]
+  customers              Customer[]
+  utangRecords           UtangRecord[]
+  refreshTokens          RefreshToken[]
+  businessProfiles       BusinessProfile[]
+  productSerialNumbers   ProductSerialNumber[]
+  productRecipeIngredients ProductRecipeIngredient[]
 
   @@map("users")
+}
+
+model ProductSerialNumber {
+  id           String   @id @default(uuid())
+  syncId       String   @unique
+  productId    String
+  userId       String?
+  serialNumber String
+  status       String   @default("AVAILABLE") // "AVAILABLE", "SOLD", "WASTE", "RETURNED"
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([productId, serialNumber])
+  @@index([productId])
+  @@index([updatedAt])
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@map("product_serial_numbers")
+}
+
+model ProductRecipeIngredient {
+  id                  String   @id @default(uuid())
+  syncId              String   @unique
+  recipeProductId     String
+  ingredientProductId String
+  userId              String?
+  quantityNeeded      Float    // Amount of ingredient in its base unit needed for 1 unit of recipe
+  isDeleted           Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  recipeProduct       Product  @relation("RecipeToIngredients", fields: [recipeProductId], references: [id], onDelete: Cascade)
+  ingredientProduct   Product  @relation("IngredientToRecipes", fields: [ingredientProductId], references: [id], onDelete: Cascade)
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([recipeProductId, ingredientProductId])
+  @@index([recipeProductId])
+  @@index([ingredientProductId])
+  @@index([updatedAt])
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@map("product_recipe_ingredients")
 }
 
 model RefreshToken {
@@ -494,4 +554,26 @@ model DeviceSync {
 
   @@map("device_syncs")
 }
+
+model BusinessProfile {
+  id              String   @id @default(uuid())
+  syncId          String   @unique
+  deviceId        String
+  userId          String?
+  businessType    String   // "retail", "food_service", "auto_parts", "hardware", "marketplace", "general"
+  businessName    String
+  defaultCurrency String   @default("PHP")
+  preferences     Json     @default("{}")
+  isDeleted       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([updatedAt])
+  @@index([deviceId])
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@map("business_profiles")
+}
+
 

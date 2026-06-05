@@ -25,6 +25,9 @@ export declare class SyncController {
             feeTransactions: any;
             transactions: any;
             ledgerEntries: any;
+            businessProfiles: any;
+            productSerialNumbers: any;
+            productRecipeIngredients: any;
         };
     }>;
 }

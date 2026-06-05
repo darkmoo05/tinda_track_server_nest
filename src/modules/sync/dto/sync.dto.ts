@@ -580,6 +580,13 @@ export class PushProductDto {
   @IsOptional()
   shelfLocationId?: string;
 
+  @IsString()
+  @IsOptional()
+  itemType?: string;
+
+  @IsOptional()
+  customAttributes?: any;
+
   @IsISO8601()
   @IsOptional()
   createdAt?: string;
@@ -797,6 +804,114 @@ export class PushUtangRecordDto {
   updatedAt?: string;
 }
 
+export class PushBusinessProfileDto {
+  @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  syncId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  deviceId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  businessType!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  businessName!: string;
+
+  @IsString()
+  @IsOptional()
+  defaultCurrency?: string;
+
+  @IsOptional()
+  preferences?: any;
+
+  @IsBoolean()
+  @IsOptional()
+  isDeleted?: boolean;
+
+  @IsISO8601()
+  @IsOptional()
+  createdAt?: string;
+
+  @IsISO8601()
+  @IsOptional()
+  updatedAt?: string;
+}
+
+export class PushProductSerialNumberDto {
+  @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  syncId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  productId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  serialNumber!: string;
+
+  @IsString()
+  @IsOptional()
+  status?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isDeleted?: boolean;
+
+  @IsISO8601()
+  @IsOptional()
+  createdAt?: string;
+
+  @IsISO8601()
+  @IsOptional()
+  updatedAt?: string;
+}
+
+export class PushProductRecipeIngredientDto {
+  @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  syncId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  recipeProductId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  ingredientProductId!: string;
+
+  @IsNumber()
+  quantityNeeded!: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isDeleted?: boolean;
+
+  @IsISO8601()
+  @IsOptional()
+  createdAt?: string;
+
+  @IsISO8601()
+  @IsOptional()
+  updatedAt?: string;
+}
+
 export class SyncPushDto {
   @IsArray()
   @ValidateNested({ each: true })
@@ -881,6 +996,24 @@ export class SyncPushDto {
   @Type(() => PushLedgerEntryDto)
   @IsOptional()
   ledgerEntries?: PushLedgerEntryDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PushBusinessProfileDto)
+  @IsOptional()
+  businessProfiles?: PushBusinessProfileDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PushProductSerialNumberDto)
+  @IsOptional()
+  productSerialNumbers?: PushProductSerialNumberDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PushProductRecipeIngredientDto)
+  @IsOptional()
+  productRecipeIngredients?: PushProductRecipeIngredientDto[];
 }
 
 export class SyncRequestDto {
