@@ -22,6 +22,9 @@ export declare class SyncService {
             feeTransactions: any;
             transactions: any;
             ledgerEntries: any;
+            businessProfiles: any;
+            productSerialNumbers: any;
+            productRecipeIngredients: any;
         };
     }>;
 }

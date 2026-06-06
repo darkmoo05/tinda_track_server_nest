@@ -157,6 +157,8 @@ export declare class PushProductDto {
     expirationDate?: string;
     categoryId?: string;
     shelfLocationId?: string;
+    itemType?: string;
+    customAttributes?: any;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -221,6 +223,38 @@ export declare class PushUtangRecordDto {
     createdAt?: string;
     updatedAt?: string;
 }
+export declare class PushBusinessProfileDto {
+    id?: string;
+    syncId: string;
+    deviceId: string;
+    businessType: string;
+    businessName: string;
+    defaultCurrency?: string;
+    preferences?: any;
+    isDeleted?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
+export declare class PushProductSerialNumberDto {
+    id?: string;
+    syncId: string;
+    productId: string;
+    serialNumber: string;
+    status?: string;
+    isDeleted?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
+export declare class PushProductRecipeIngredientDto {
+    id?: string;
+    syncId: string;
+    recipeProductId: string;
+    ingredientProductId: string;
+    quantityNeeded: number;
+    isDeleted?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
 export declare class SyncPushDto {
     productCategories?: PushProductCategoryDto[];
     shelfLocations?: PushShelfLocationDto[];
@@ -236,6 +270,9 @@ export declare class SyncPushDto {
     feeTransactions?: PushFeeTransactionDto[];
     transactions?: PushTransactionDto[];
     ledgerEntries?: PushLedgerEntryDto[];
+    businessProfiles?: PushBusinessProfileDto[];
+    productSerialNumbers?: PushProductSerialNumberDto[];
+    productRecipeIngredients?: PushProductRecipeIngredientDto[];
 }
 export declare class SyncRequestDto {
     deviceId: string;

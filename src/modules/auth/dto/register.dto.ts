@@ -13,4 +13,19 @@ export class RegisterDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
+
+  @IsString()
+  @MinLength(2)
+  businessName!: string;
+
+  @IsString()
+  businessType!: string;
+
+  @IsOptional()
+  @IsString()
+  defaultCurrency?: string;
+
+  @IsOptional()
+  @IsString()
+  deviceId?: string;
 }

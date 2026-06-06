@@ -190,6 +190,8 @@ let SyncService = SyncService_1 = class SyncService {
                         expirationDate: r.expirationDate ? new Date(r.expirationDate) : null,
                         categoryId: r.categoryId ?? null,
                         shelfLocationId: r.shelfLocationId ?? null,
+                        itemType: r.itemType ?? 'standard',
+                        customAttributes: r.customAttributes ?? {},
                     };
                     if (existing) {
                         await tx.product.update({
@@ -238,6 +240,82 @@ let SyncService = SyncService_1 = class SyncService {
                     }
                     else {
                         await tx.productUnitConversion.create({
+                            data: { ...(validUuid(r.id) ? { id: validUuid(r.id) } : {}), syncId: r.syncId, ...data },
+                        });
+                    }
+                }
+            }
+            if (push.productSerialNumbers && push.productSerialNumbers.length > 0) {
+                const syncIds = push.productSerialNumbers.map((r) => r.syncId);
+                const existingRecords = await tx.productSerialNumber.findMany({
+                    where: { syncId: { in: syncIds } },
+                });
+                const existingMap = new Map(existingRecords.map((x) => [x.syncId, x]));
+                for (const r of push.productSerialNumbers) {
+                    const existing = existingMap.get(r.syncId);
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
+                    if (existing) {
+                        if (existing.userId !== userId) {
+                            this.logger.warn(`Security Warning: User ${userId} attempted to modify ProductSerialNumber ${r.syncId} owned by User ${existing.userId}`);
+                            continue;
+                        }
+                        if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+                            continue;
+                        }
+                    }
+                    const data = {
+                        userId,
+                        productId: r.productId,
+                        serialNumber: r.serialNumber,
+                        status: r.status ?? 'AVAILABLE',
+                        isDeleted: r.isDeleted ?? false,
+                    };
+                    if (existing) {
+                        await tx.productSerialNumber.update({ where: { id: existing.id }, data });
+                    }
+                    else {
+                        await tx.productSerialNumber.create({
+                            data: { ...(validUuid(r.id) ? { id: validUuid(r.id) } : {}), syncId: r.syncId, ...data },
+                        });
+                    }
+                }
+            }
+            if (push.productRecipeIngredients && push.productRecipeIngredients.length > 0) {
+                const syncIds = push.productRecipeIngredients.map((r) => r.syncId);
+                const existingRecords = await tx.productRecipeIngredient.findMany({
+                    where: { syncId: { in: syncIds } },
+                });
+                const existingMap = new Map(existingRecords.map((x) => [x.syncId, x]));
+                for (const r of push.productRecipeIngredients) {
+                    const existing = existingMap.get(r.syncId);
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
+                    if (existing) {
+                        if (existing.userId !== userId) {
+                            this.logger.warn(`Security Warning: User ${userId} attempted to modify ProductRecipeIngredient ${r.syncId} owned by User ${existing.userId}`);
+                            continue;
+                        }
+                        if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+                            continue;
+                        }
+                    }
+                    const data = {
+                        userId,
+                        recipeProductId: r.recipeProductId,
+                        ingredientProductId: r.ingredientProductId,
+                        quantityNeeded: r.quantityNeeded,
+                        isDeleted: r.isDeleted ?? false,
+                    };
+                    if (existing) {
+                        await tx.productRecipeIngredient.update({ where: { id: existing.id }, data });
+                    }
+                    else {
+                        await tx.productRecipeIngredient.create({
                             data: { ...(validUuid(r.id) ? { id: validUuid(r.id) } : {}), syncId: r.syncId, ...data },
                         });
                     }
@@ -695,6 +773,46 @@ let SyncService = SyncService_1 = class SyncService {
                     }
                 }
             }
+            if (push.businessProfiles && push.businessProfiles.length > 0) {
+                const syncIds = push.businessProfiles.map((r) => r.syncId);
+                const existingRecords = await tx.businessProfile.findMany({
+                    where: { syncId: { in: syncIds } },
+                });
+                const existingMap = new Map(existingRecords.map((x) => [x.syncId, x]));
+                for (const r of push.businessProfiles) {
+                    const existing = existingMap.get(r.syncId);
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
+                    if (existing) {
+                        if (existing.userId !== userId) {
+                            this.logger.warn(`Security Warning: User ${userId} attempted to modify BusinessProfile ${r.syncId} owned by User ${existing.userId}`);
+                            continue;
+                        }
+                        if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+                            continue;
+                        }
+                    }
+                    const data = {
+                        userId,
+                        deviceId: r.deviceId,
+                        businessType: r.businessType,
+                        businessName: r.businessName,
+                        defaultCurrency: r.defaultCurrency ?? 'PHP',
+                        preferences: r.preferences ?? {},
+                        isDeleted: r.isDeleted ?? false,
+                    };
+                    if (existing) {
+                        await tx.businessProfile.update({ where: { id: existing.id }, data });
+                    }
+                    else {
+                        await tx.businessProfile.create({
+                            data: { ...(validUuid(r.id) ? { id: validUuid(r.id) } : {}), syncId: r.syncId, ...data },
+                        });
+                    }
+                }
+            }
         });
         this.logger.log(`Push complete for device: ${deviceId}, user: ${userId}`);
         const pullData = await this.prisma.$transaction(async (tx) => {
@@ -769,6 +887,21 @@ let SyncService = SyncService_1 = class SyncService {
                 orderBy: { updatedAt: 'asc' },
                 take: 500,
             });
+            const businessProfiles = await tx.businessProfile.findMany({
+                where: pullWhere(true, true),
+                orderBy: { updatedAt: 'asc' },
+                take: 500,
+            });
+            const productSerialNumbers = await tx.productSerialNumber.findMany({
+                where: pullWhere(false, true),
+                orderBy: { updatedAt: 'asc' },
+                take: 500,
+            });
+            const productRecipeIngredients = await tx.productRecipeIngredient.findMany({
+                where: pullWhere(false, true),
+                orderBy: { updatedAt: 'asc' },
+                take: 500,
+            });
             const mappedSales = sales.map(({ saleItems, ...sale }) => ({
                 ...sale,
                 items: saleItems,
@@ -788,6 +921,9 @@ let SyncService = SyncService_1 = class SyncService {
                 feeTransactions,
                 transactions,
                 ledgerEntries,
+                businessProfiles,
+                productSerialNumbers,
+                productRecipeIngredients,
             };
         });
         return {

@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SyncRequestDto = exports.SyncPushDto = exports.PushUtangRecordDto = exports.PushCustomerDto = exports.PushSaleDto = exports.PushSaleItemDto = exports.PushProductUnitConversionDto = exports.PushProductDto = exports.PushShelfLocationDto = exports.PushProductCategoryDto = exports.PushLedgerEntryDto = exports.PushTransactionDto = exports.PushFeeTransactionDto = exports.PushMovementCategoryDto = exports.PushTransactionTypeDto = exports.PushPartyDto = exports.PushChargeDto = void 0;
+exports.SyncRequestDto = exports.SyncPushDto = exports.PushProductRecipeIngredientDto = exports.PushProductSerialNumberDto = exports.PushBusinessProfileDto = exports.PushUtangRecordDto = exports.PushCustomerDto = exports.PushSaleDto = exports.PushSaleItemDto = exports.PushProductUnitConversionDto = exports.PushProductDto = exports.PushShelfLocationDto = exports.PushProductCategoryDto = exports.PushLedgerEntryDto = exports.PushTransactionDto = exports.PushFeeTransactionDto = exports.PushMovementCategoryDto = exports.PushTransactionTypeDto = exports.PushPartyDto = exports.PushChargeDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 const client_1 = require("@prisma/client");
@@ -110,7 +110,6 @@ __decorate([
 ], PushPartyDto.prototype, "name", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], PushPartyDto.prototype, "accountNumber", void 0);
 __decorate([
@@ -769,6 +768,8 @@ class PushProductDto {
     expirationDate;
     categoryId;
     shelfLocationId;
+    itemType;
+    customAttributes;
     createdAt;
     updatedAt;
 }
@@ -871,6 +872,15 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], PushProductDto.prototype, "shelfLocationId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushProductDto.prototype, "itemType", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], PushProductDto.prototype, "customAttributes", void 0);
 __decorate([
     (0, class_validator_1.IsISO8601)(),
     (0, class_validator_1.IsOptional)(),
@@ -1196,6 +1206,169 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], PushUtangRecordDto.prototype, "updatedAt", void 0);
+class PushBusinessProfileDto {
+    id;
+    syncId;
+    deviceId;
+    businessType;
+    businessName;
+    defaultCurrency;
+    preferences;
+    isDeleted;
+    createdAt;
+    updatedAt;
+}
+exports.PushBusinessProfileDto = PushBusinessProfileDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushBusinessProfileDto.prototype, "id", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushBusinessProfileDto.prototype, "syncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushBusinessProfileDto.prototype, "deviceId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushBusinessProfileDto.prototype, "businessType", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushBusinessProfileDto.prototype, "businessName", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushBusinessProfileDto.prototype, "defaultCurrency", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], PushBusinessProfileDto.prototype, "preferences", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], PushBusinessProfileDto.prototype, "isDeleted", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushBusinessProfileDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushBusinessProfileDto.prototype, "updatedAt", void 0);
+class PushProductSerialNumberDto {
+    id;
+    syncId;
+    productId;
+    serialNumber;
+    status;
+    isDeleted;
+    createdAt;
+    updatedAt;
+}
+exports.PushProductSerialNumberDto = PushProductSerialNumberDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushProductSerialNumberDto.prototype, "id", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushProductSerialNumberDto.prototype, "syncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushProductSerialNumberDto.prototype, "productId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushProductSerialNumberDto.prototype, "serialNumber", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushProductSerialNumberDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], PushProductSerialNumberDto.prototype, "isDeleted", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushProductSerialNumberDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushProductSerialNumberDto.prototype, "updatedAt", void 0);
+class PushProductRecipeIngredientDto {
+    id;
+    syncId;
+    recipeProductId;
+    ingredientProductId;
+    quantityNeeded;
+    isDeleted;
+    createdAt;
+    updatedAt;
+}
+exports.PushProductRecipeIngredientDto = PushProductRecipeIngredientDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushProductRecipeIngredientDto.prototype, "id", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushProductRecipeIngredientDto.prototype, "syncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushProductRecipeIngredientDto.prototype, "recipeProductId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushProductRecipeIngredientDto.prototype, "ingredientProductId", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], PushProductRecipeIngredientDto.prototype, "quantityNeeded", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], PushProductRecipeIngredientDto.prototype, "isDeleted", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushProductRecipeIngredientDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushProductRecipeIngredientDto.prototype, "updatedAt", void 0);
 class SyncPushDto {
     productCategories;
     shelfLocations;
@@ -1211,6 +1384,9 @@ class SyncPushDto {
     feeTransactions;
     transactions;
     ledgerEntries;
+    businessProfiles;
+    productSerialNumbers;
+    productRecipeIngredients;
 }
 exports.SyncPushDto = SyncPushDto;
 __decorate([
@@ -1311,6 +1487,27 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Array)
 ], SyncPushDto.prototype, "ledgerEntries", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => PushBusinessProfileDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], SyncPushDto.prototype, "businessProfiles", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => PushProductSerialNumberDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], SyncPushDto.prototype, "productSerialNumbers", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => PushProductRecipeIngredientDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], SyncPushDto.prototype, "productRecipeIngredients", void 0);
 class SyncRequestDto {
     deviceId;
     lastSync;
