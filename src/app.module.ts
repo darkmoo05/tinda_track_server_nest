@@ -17,6 +17,7 @@ import { LedgerEntryModule } from './pocket_ledger/modules/ledger-entry/ledger-e
 import { DashboardModule } from './pocket_ledger/modules/dashboard/dashboard.module.js';
 import { TransactionModule } from './pocket_ledger/modules/transaction/transaction.module.js';
 import { FeeTransactionModule } from './pocket_ledger/modules/fee-transaction/fee-transaction.module.js';
+import { MonitoringSessionModule } from './pocket_ledger/modules/monitoring-session/monitoring-session.module.js';
 
 // ── TindaTracker modules ──────────────────────────────────────────────────
 import { InventoryModule } from './tinda_tracker/modules/inventory/inventory.module.js';
@@ -112,6 +113,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard.js';
     PosModule,
     CustomersModule,
     FeeTransactionModule,
+    MonitoringSessionModule,
   ],
   providers: [
     // Register guards globally

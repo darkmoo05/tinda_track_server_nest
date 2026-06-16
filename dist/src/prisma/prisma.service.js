@@ -48,6 +48,7 @@ let PrismaService = PrismaService_1 = class PrismaService {
             'Sale',
             'Customer',
             'UtangRecord',
+            'MonitoringSession',
         ]);
         this._extendedClient = this._client.$extends({
             query: {
@@ -61,7 +62,10 @@ let PrismaService = PrismaService_1 = class PrismaService {
                                 operation === 'count')) {
                             args.where = args.where || {};
                             const where = args.where;
-                            if (where.isDeleted === undefined) {
+                            if (where.isDeleted === 'ANY') {
+                                delete where.isDeleted;
+                            }
+                            else if (where.isDeleted === undefined) {
                                 where.isDeleted = false;
                             }
                         }
@@ -154,6 +158,9 @@ let PrismaService = PrismaService_1 = class PrismaService {
     }
     get refreshToken() {
         return this._extendedClient.refreshToken;
+    }
+    get monitoringSession() {
+        return this._extendedClient.monitoringSession;
     }
     async $transaction(callback) {
         return this._extendedClient.$transaction(callback);

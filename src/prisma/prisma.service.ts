@@ -44,6 +44,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
       'Sale',
       'Customer',
       'UtangRecord',
+      'MonitoringSession',
     ]);
 
     // Extend Prisma Client to automate soft-delete operations and query execution logging
@@ -63,7 +64,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
             ) {
               args.where = args.where || {};
               const where = args.where as any;
-              if (where.isDeleted === undefined) {
+              if (where.isDeleted === 'ANY') {
+                delete where.isDeleted;
+              } else if (where.isDeleted === undefined) {
                 where.isDeleted = false;
               }
             }
@@ -188,6 +191,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get refreshToken() {
     return this._extendedClient.refreshToken;
+  }
+
+  get monitoringSession() {
+    return this._extendedClient.monitoringSession;
   }
 
   async $transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {

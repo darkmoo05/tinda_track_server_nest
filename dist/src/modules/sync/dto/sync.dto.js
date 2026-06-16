@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SyncRequestDto = exports.SyncPushDto = exports.PushProductRecipeIngredientDto = exports.PushProductSerialNumberDto = exports.PushBusinessProfileDto = exports.PushUtangRecordDto = exports.PushCustomerDto = exports.PushSaleDto = exports.PushSaleItemDto = exports.PushProductUnitConversionDto = exports.PushProductDto = exports.PushShelfLocationDto = exports.PushProductCategoryDto = exports.PushLedgerEntryDto = exports.PushTransactionDto = exports.PushFeeTransactionDto = exports.PushMovementCategoryDto = exports.PushTransactionTypeDto = exports.PushPartyDto = exports.PushChargeDto = void 0;
+exports.SyncRequestDto = exports.SyncPushDto = exports.PushMonitoringSessionDto = exports.PushProductRecipeIngredientDto = exports.PushProductSerialNumberDto = exports.PushBusinessProfileDto = exports.PushUtangRecordDto = exports.PushCustomerDto = exports.PushSaleDto = exports.PushSaleItemDto = exports.PushProductUnitConversionDto = exports.PushProductDto = exports.PushShelfLocationDto = exports.PushProductCategoryDto = exports.PushLedgerEntryDto = exports.PushTransactionDto = exports.PushFeeTransactionDto = exports.PushMovementCategoryDto = exports.PushTransactionTypeDto = exports.PushPartyDto = exports.PushChargeDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 const client_1 = require("@prisma/client");
@@ -1369,7 +1369,110 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], PushProductRecipeIngredientDto.prototype, "updatedAt", void 0);
+class PushMonitoringSessionDto {
+    id;
+    syncId;
+    deviceId;
+    name;
+    status;
+    startDateMs;
+    endDateMs;
+    startGcash;
+    startMaya;
+    startOnHand;
+    endGcash;
+    endMaya;
+    endOnHand;
+    isDeleted;
+    createdAt;
+    updatedAt;
+}
+exports.PushMonitoringSessionDto = PushMonitoringSessionDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushMonitoringSessionDto.prototype, "id", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushMonitoringSessionDto.prototype, "syncId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushMonitoringSessionDto.prototype, "deviceId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PushMonitoringSessionDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushMonitoringSessionDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], PushMonitoringSessionDto.prototype, "startDateMs", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o, v) => v !== null),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], PushMonitoringSessionDto.prototype, "endDateMs", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], PushMonitoringSessionDto.prototype, "startGcash", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], PushMonitoringSessionDto.prototype, "startMaya", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], PushMonitoringSessionDto.prototype, "startOnHand", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o, v) => v !== null),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], PushMonitoringSessionDto.prototype, "endGcash", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o, v) => v !== null),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], PushMonitoringSessionDto.prototype, "endMaya", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o, v) => v !== null),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], PushMonitoringSessionDto.prototype, "endOnHand", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], PushMonitoringSessionDto.prototype, "isDeleted", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushMonitoringSessionDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, class_validator_1.IsISO8601)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PushMonitoringSessionDto.prototype, "updatedAt", void 0);
 class SyncPushDto {
+    monitoringSessions;
     productCategories;
     shelfLocations;
     products;
@@ -1389,6 +1492,13 @@ class SyncPushDto {
     productRecipeIngredients;
 }
 exports.SyncPushDto = SyncPushDto;
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => PushMonitoringSessionDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], SyncPushDto.prototype, "monitoringSessions", void 0);
 __decorate([
     (0, class_validator_1.IsArray)(),
     (0, class_validator_1.ValidateNested)({ each: true }),

@@ -255,7 +255,26 @@ export declare class PushProductRecipeIngredientDto {
     createdAt?: string;
     updatedAt?: string;
 }
+export declare class PushMonitoringSessionDto {
+    id?: string;
+    syncId: string;
+    deviceId: string;
+    name: string;
+    status?: string;
+    startDateMs: number;
+    endDateMs?: number | null;
+    startGcash?: number;
+    startMaya?: number;
+    startOnHand?: number;
+    endGcash?: number | null;
+    endMaya?: number | null;
+    endOnHand?: number | null;
+    isDeleted?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
 export declare class SyncPushDto {
+    monitoringSessions?: PushMonitoringSessionDto[];
     productCategories?: PushProductCategoryDto[];
     shelfLocations?: PushShelfLocationDto[];
     products?: PushProductDto[];

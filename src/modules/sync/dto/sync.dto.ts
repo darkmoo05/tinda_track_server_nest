@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -912,7 +913,82 @@ export class PushProductRecipeIngredientDto {
   updatedAt?: string;
 }
 
+export class PushMonitoringSessionDto {
+  @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  syncId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  deviceId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsString()
+  @IsOptional()
+  status?: string;
+
+  @IsNumber()
+  startDateMs!: number;
+
+  @ValidateIf((o, v) => v !== null)
+  @IsNumber()
+  @IsOptional()
+  endDateMs?: number | null;
+
+  @IsNumber()
+  @IsOptional()
+  startGcash?: number;
+
+  @IsNumber()
+  @IsOptional()
+  startMaya?: number;
+
+  @IsNumber()
+  @IsOptional()
+  startOnHand?: number;
+
+  @ValidateIf((o, v) => v !== null)
+  @IsNumber()
+  @IsOptional()
+  endGcash?: number | null;
+
+  @ValidateIf((o, v) => v !== null)
+  @IsNumber()
+  @IsOptional()
+  endMaya?: number | null;
+
+  @ValidateIf((o, v) => v !== null)
+  @IsNumber()
+  @IsOptional()
+  endOnHand?: number | null;
+
+  @IsBoolean()
+  @IsOptional()
+  isDeleted?: boolean;
+
+  @IsISO8601()
+  @IsOptional()
+  createdAt?: string;
+
+  @IsISO8601()
+  @IsOptional()
+  updatedAt?: string;
+}
+
 export class SyncPushDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PushMonitoringSessionDto)
+  @IsOptional()
+  monitoringSessions?: PushMonitoringSessionDto[];
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PushProductCategoryDto)
