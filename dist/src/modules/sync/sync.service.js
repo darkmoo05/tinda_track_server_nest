@@ -88,6 +88,7 @@ let SyncService = SyncService_1 = class SyncService {
                         examples: r.examples ?? '',
                         isQuickAccess: r.isQuickAccess ?? false,
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.productCategory.update({
@@ -133,6 +134,7 @@ let SyncService = SyncService_1 = class SyncService {
                         examples: r.examples ?? '',
                         isDeleted: r.isDeleted ?? false,
                         imageUrl: r.imageUrl ?? null,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.shelfLocation.update({
@@ -192,6 +194,7 @@ let SyncService = SyncService_1 = class SyncService {
                         shelfLocationId: r.shelfLocationId ?? null,
                         itemType: r.itemType ?? 'standard',
                         customAttributes: r.customAttributes ?? {},
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.product.update({
@@ -234,6 +237,7 @@ let SyncService = SyncService_1 = class SyncService {
                         conversionFactor: r.conversionFactor,
                         costPrice: r.costPrice,
                         sellingPrice: r.sellingPrice,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.productUnitConversion.update({ where: { id: existing.id }, data });
@@ -272,6 +276,7 @@ let SyncService = SyncService_1 = class SyncService {
                         serialNumber: r.serialNumber,
                         status: r.status ?? 'AVAILABLE',
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.productSerialNumber.update({ where: { id: existing.id }, data });
@@ -310,6 +315,7 @@ let SyncService = SyncService_1 = class SyncService {
                         ingredientProductId: r.ingredientProductId,
                         quantityNeeded: r.quantityNeeded,
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.productRecipeIngredient.update({ where: { id: existing.id }, data });
@@ -350,6 +356,7 @@ let SyncService = SyncService_1 = class SyncService {
                         address: r.address ?? '',
                         notes: r.notes ?? '',
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.customer.update({ where: { id: existing.id }, data });
@@ -389,6 +396,7 @@ let SyncService = SyncService_1 = class SyncService {
                         description: r.description ?? '',
                         amount: r.amount,
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.utangRecord.update({ where: { id: existing.id }, data });
@@ -432,6 +440,7 @@ let SyncService = SyncService_1 = class SyncService {
                         changeAmount: r.changeAmount ?? 0,
                         totalItems: r.totalItems,
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     let saleId;
                     if (existing) {
@@ -490,6 +499,7 @@ let SyncService = SyncService_1 = class SyncService {
                         chargeAmount: r.chargeAmount,
                         transactionTypeKey: r.transactionTypeKey ?? 'gcash_cashin',
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.charge.update({ where: { id: existing.id }, data });
@@ -532,6 +542,7 @@ let SyncService = SyncService_1 = class SyncService {
                         joinDate: r.joinDate,
                         isVerified: r.isVerified ?? false,
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.party.update({ where: { id: existing.id }, data });
@@ -571,6 +582,7 @@ let SyncService = SyncService_1 = class SyncService {
                         isOutflow: r.isOutflow ?? false,
                         walletAccount: r.walletAccount ?? 'GCash',
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.transactionType.update({ where: { id: existing.id }, data });
@@ -608,6 +620,7 @@ let SyncService = SyncService_1 = class SyncService {
                         deviceId: r.deviceId,
                         name: r.name,
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.movementCategory.update({ where: { id: existing.id }, data });
@@ -648,6 +661,7 @@ let SyncService = SyncService_1 = class SyncService {
                         feeType: r.feeType,
                         chargeDestination: r.chargeDestination,
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.feeTransaction.update({ where: { id: existing.id }, data });
@@ -707,6 +721,7 @@ let SyncService = SyncService_1 = class SyncService {
                         reference: r.reference ?? '',
                         entryDate: r.entryDate ?? r.updatedAt ?? new Date().toISOString(),
                         status: r.status ?? client_1.TransactionStatus.COMPLETED,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.transaction.update({ where: { id: existing.id }, data });
@@ -762,6 +777,7 @@ let SyncService = SyncService_1 = class SyncService {
                         ownerPartyAccount: r.ownerPartyAccount ?? null,
                         entryDate: r.entryDate ?? r.updatedAt ?? new Date().toISOString(),
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.ledgerEntry.update({ where: { id: existing.id }, data });
@@ -802,12 +818,60 @@ let SyncService = SyncService_1 = class SyncService {
                         defaultCurrency: r.defaultCurrency ?? 'PHP',
                         preferences: r.preferences ?? {},
                         isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
                     };
                     if (existing) {
                         await tx.businessProfile.update({ where: { id: existing.id }, data });
                     }
                     else {
                         await tx.businessProfile.create({
+                            data: { ...(validUuid(r.id) ? { id: validUuid(r.id) } : {}), syncId: r.syncId, ...data },
+                        });
+                    }
+                }
+            }
+            if (push.monitoringSessions && push.monitoringSessions.length > 0) {
+                const syncIds = push.monitoringSessions.map((r) => r.syncId);
+                const existingRecords = await tx.monitoringSession.findMany({
+                    where: { syncId: { in: syncIds } },
+                });
+                const existingMap = new Map(existingRecords.map((x) => [x.syncId, x]));
+                for (const r of push.monitoringSessions) {
+                    const existing = existingMap.get(r.syncId);
+                    let incomingUpdatedAt = r.updatedAt ? new Date(r.updatedAt) : new Date();
+                    if (incomingUpdatedAt.getTime() > Date.now() + 300000) {
+                        incomingUpdatedAt = new Date();
+                    }
+                    if (existing) {
+                        if (existing.userId !== userId) {
+                            this.logger.warn(`Security Warning: User ${userId} attempted to modify MonitoringSession ${r.syncId} owned by User ${existing.userId}`);
+                            continue;
+                        }
+                        if (existing.updatedAt.getTime() > incomingUpdatedAt.getTime()) {
+                            continue;
+                        }
+                    }
+                    const data = {
+                        userId,
+                        deviceId: r.deviceId,
+                        name: r.name,
+                        status: r.status ?? 'ACTIVE',
+                        startDateMs: BigInt(r.startDateMs),
+                        endDateMs: r.endDateMs ? BigInt(r.endDateMs) : null,
+                        startGcash: r.startGcash ?? 0.0,
+                        startMaya: r.startMaya ?? 0.0,
+                        startOnHand: r.startOnHand ?? 0.0,
+                        endGcash: r.endGcash ?? null,
+                        endMaya: r.endMaya ?? null,
+                        endOnHand: r.endOnHand ?? null,
+                        isDeleted: r.isDeleted ?? false,
+                        updatedAt: incomingUpdatedAt,
+                    };
+                    if (existing) {
+                        await tx.monitoringSession.update({ where: { id: existing.id }, data });
+                    }
+                    else {
+                        await tx.monitoringSession.create({
                             data: { ...(validUuid(r.id) ? { id: validUuid(r.id) } : {}), syncId: r.syncId, ...data },
                         });
                     }
@@ -902,9 +966,32 @@ let SyncService = SyncService_1 = class SyncService {
                 orderBy: { updatedAt: 'asc' },
                 take: 500,
             });
+            const monitoringSessions = await tx.monitoringSession.findMany({
+                where: pullWhere(true, true),
+                orderBy: { updatedAt: 'asc' },
+                take: 500,
+            });
             const mappedSales = sales.map(({ saleItems, ...sale }) => ({
                 ...sale,
                 items: saleItems,
+            }));
+            const mappedMonitoringSessions = monitoringSessions.map((s) => ({
+                id: s.id,
+                syncId: s.syncId,
+                deviceId: s.deviceId,
+                name: s.name,
+                status: s.status,
+                startDateMs: Number(s.startDateMs),
+                endDateMs: s.endDateMs ? Number(s.endDateMs) : null,
+                startGcash: s.startGcash,
+                startMaya: s.startMaya,
+                startOnHand: s.startOnHand,
+                endGcash: s.endGcash,
+                endMaya: s.endMaya,
+                endOnHand: s.endOnHand,
+                isDeleted: s.isDeleted,
+                createdAt: s.createdAt,
+                updatedAt: s.updatedAt,
             }));
             return {
                 productCategories,
@@ -924,6 +1011,7 @@ let SyncService = SyncService_1 = class SyncService {
                 businessProfiles,
                 productSerialNumbers,
                 productRecipeIngredients,
+                monitoringSessions: mappedMonitoringSessions,
             };
         });
         return {

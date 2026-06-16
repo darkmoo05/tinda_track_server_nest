@@ -27,6 +27,7 @@ const ledger_entry_module_js_1 = require("./pocket_ledger/modules/ledger-entry/l
 const dashboard_module_js_1 = require("./pocket_ledger/modules/dashboard/dashboard.module.js");
 const transaction_module_js_1 = require("./pocket_ledger/modules/transaction/transaction.module.js");
 const fee_transaction_module_js_1 = require("./pocket_ledger/modules/fee-transaction/fee-transaction.module.js");
+const monitoring_session_module_js_1 = require("./pocket_ledger/modules/monitoring-session/monitoring-session.module.js");
 const inventory_module_js_1 = require("./tinda_tracker/modules/inventory/inventory.module.js");
 const pos_module_js_1 = require("./tinda_tracker/modules/pos/pos.module.js");
 const customers_module_js_1 = require("./tinda_tracker/modules/customers/customers.module.js");
@@ -107,6 +108,7 @@ exports.AppModule = AppModule = __decorate([
             pos_module_js_1.PosModule,
             customers_module_js_1.CustomersModule,
             fee_transaction_module_js_1.FeeTransactionModule,
+            monitoring_session_module_js_1.MonitoringSessionModule,
         ],
         providers: [
             {

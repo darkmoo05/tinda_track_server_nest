@@ -25,6 +25,7 @@ export declare class SyncService {
             businessProfiles: any;
             productSerialNumbers: any;
             productRecipeIngredients: any;
+            monitoringSessions: any;
         };
     }>;
 }

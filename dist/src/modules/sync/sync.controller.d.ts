@@ -28,6 +28,7 @@ export declare class SyncController {
             businessProfiles: any;
             productSerialNumbers: any;
             productRecipeIngredients: any;
+            monitoringSessions: any;
         };
     }>;
 }

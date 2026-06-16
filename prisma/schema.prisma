@@ -484,6 +484,7 @@ model User {
   businessProfiles       BusinessProfile[]
   productSerialNumbers   ProductSerialNumber[]
   productRecipeIngredients ProductRecipeIngredient[]
+  monitoringSessions     MonitoringSession[]
 
   @@map("users")
 }
@@ -574,6 +575,33 @@ model BusinessProfile {
   @@index([userId])
   @@index([userId, updatedAt])
   @@map("business_profiles")
+}
+
+model MonitoringSession {
+  id          String    @id @default(uuid())
+  syncId      String    @unique
+  deviceId    String
+  userId      String?
+  name        String
+  status      String    @default("ACTIVE")
+  startDateMs BigInt
+  endDateMs   BigInt?
+  startGcash  Float     @default(0)
+  startMaya   Float     @default(0)
+  startOnHand Float     @default(0)
+  endGcash    Float?
+  endMaya     Float?
+  endOnHand   Float?
+  isDeleted   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([updatedAt])
+  @@index([deviceId])
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@map("monitoring_sessions")
 }
 
 
